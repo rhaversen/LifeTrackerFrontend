@@ -20,32 +20,32 @@ spec:
         spec:
             automountServiceAccountToken: false
             containers:
-                - name: frontend-deployment
-                  resources:
-                      limits:
-                          cpu: "0.2"
-                          memory: "256Mi"
-                      requests:
-                          cpu: "0.1"
-                          memory: "125Mi"
-                  image: "rhaversen/life-tracker-frontend:${GITHUB_SHA}"
-                  imagePullPolicy: Always
-                  livenessProbe:
-                      httpGet:
-                          path: service/livez
-                          port: 5000
-                      periodSeconds: 10
-                      initialDelaySeconds: 15
-                      failureThreshold: 5
-                  readinessProbe:
-                      httpGet:
-                          path: service/readyz
-                          port: 5000
-                      periodSeconds: 10
-                      initialDelaySeconds: 15
-                      failureThreshold: 5
-                  ports:
-                      - containerPort: 5000
-                  envFrom:
-                      - secretRef:
-                            name: frontend-secrets
+                -   name: frontend-deployment
+                    resources:
+                        limits:
+                            cpu: "0.2"
+                            memory: "256Mi"
+                        requests:
+                            cpu: "0.1"
+                            memory: "125Mi"
+                    image: "rhaversen/life-tracker-frontend:${GITHUB_SHA}"
+                    imagePullPolicy: Always
+                    livenessProbe:
+                        httpGet:
+                            path: service/livez
+                            port: 5000
+                        periodSeconds: 10
+                        initialDelaySeconds: 15
+                        failureThreshold: 5
+                    readinessProbe:
+                        httpGet:
+                            path: service/readyz
+                            port: 5000
+                        periodSeconds: 10
+                        initialDelaySeconds: 15
+                        failureThreshold: 5
+                    ports:
+                        -   containerPort: 5000
+                    envFrom:
+                        -   secretRef:
+                                name: frontend-secrets
