@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+    name: frontend-service
+    namespace: life-tracker-staging
+spec:
+    type: ClusterIP
+    selector:
+        app: frontend-deployment
+    ports:
+        - protocol: TCP
+          port: 80
+          targetPort: 3000
