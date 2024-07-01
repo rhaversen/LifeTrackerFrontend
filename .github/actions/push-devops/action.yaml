@@ -1,0 +1,53 @@
+name: "Push to DevOps Repo"
+description: "Updates deployment files and pushes to DevOps repository"
+
+inputs:
+    environment:
+        description: "Deployment environment"
+        required: true
+    devops_repo_token:
+        description: "Token for the DevOps repository"
+        required: true
+
+runs:
+    using: "composite"
+    steps:
+        -   name: Checkout code
+            uses: actions/checkout@v4
+
+        -   name: Configure Git
+            run: |
+                git config --global user.name "GitHub Actions Bot"
+                git config --global user.email "actions@github.com"
+            shell: bash
+
+        -   name: Replace image tag in deployment.yaml
+            run: |
+                sed -i "s/\${GITHUB_SHA}/${{ github.sha }}/g" k8s/${{ inputs.environment }}/deployment.yaml
+            shell: bash
+
+        -   name: Commit changes
+            run: |
+                git add k8s/${{ inputs.environment }}/*
+                git commit -m "${{ github.sha }}"
+            shell: bash
+
+        -   name: Checkout LifeTrackerFrontend-DevOps
+            uses: actions/checkout@v4
+            with:
+                repository: "rhaversen/LifeTrackerFrontend-DevOps"
+                token: ${{ inputs.devops_repo_token }}
+                path: "LifeTrackerFrontend-DevOps"
+
+        -   name: Copy files to LifeTrackerFrontend-DevOps
+            run: |
+                cp -r k8s/${{ inputs.environment }}/* LifeTrackerFrontend-DevOps/k8s/${{ inputs.environment }}/
+            shell: bash
+
+        -   name: Push changes to LifeTrackerFrontend-DevOps
+            run: |
+                cd LifeTrackerFrontend-DevOps
+                git add k8s/${{ inputs.environment }}/*
+                git commit -m "${{ inputs.environment }}: ${{ github.sha }}"
+                git push origin HEAD
+            shell: bash

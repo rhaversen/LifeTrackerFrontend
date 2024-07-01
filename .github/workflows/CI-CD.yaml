@@ -1,0 +1,39 @@
+name: CI/CD
+
+on:
+    push:
+        branches: [ "main", "staging" ]
+
+jobs:
+    build-and-push:
+        runs-on: ubuntu-latest
+        steps:
+            -   name: Set environment based on branch
+                run: |
+                    if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+                      echo "environment=production" >> $GITHUB_ENV
+                    else
+                      echo "environment=staging" >> $GITHUB_ENV
+                    fi
+
+            -   name: Check out code
+                uses: actions/checkout@v4
+
+            -   name: Setup environment
+                uses: ./.github/actions/setup
+
+            -   name: Build
+                run: npm run build
+
+            -   name: Push Docker image
+                uses: ./.github/actions/push-dockerhub
+                with:
+                    username: ${{ secrets.DOCKER_USERNAME }}
+                    password: ${{ secrets.DOCKER_PASSWORD }}
+                    tag: ${{ github.sha }}
+
+            -   name: Update deployment and push to DevOps repo
+                uses: ./.github/actions/push-devops
+                with:
+                    devops_repo_token: ${{ secrets.DEVOPS_REPO_TOKEN }}
+                    environment: ${{ env.environment }}
