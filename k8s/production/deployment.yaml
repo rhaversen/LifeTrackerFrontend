@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: frontend-deployment
+    namespace: life-tracker-production
+spec:
+    replicas: 3
+    strategy:
+        type: RollingUpdate
+        rollingUpdate:
+            maxUnavailable: 1
+            maxSurge: 1
+    selector:
+        matchLabels:
+            app: frontend-deployment
+    template:
+        metadata:
+            labels:
+                app: frontend-deployment
+        spec:
+            automountServiceAccountToken: false
+            containers:
+                - name: frontend-deployment
+                  resources:
+                      limits:
+                          cpu: "0.5"
+                          memory: "512Mi"
+                      requests:
+                          cpu: "0.2"
+                          memory: "256Mi"
+                  image: "rhaversen/life-tracker-frontend:${GITHUB_SHA}"
+                  imagePullPolicy: Always
+                  livenessProbe:
+                      httpGet:
+                          path: service/livez
+                          port: 5000
+                      periodSeconds: 10
+                      initialDelaySeconds: 15
+                      failureThreshold: 5
+                  readinessProbe:
+                      httpGet:
+                          path: service/readyz
+                          port: 5000
+                      periodSeconds: 10
+                      initialDelaySeconds: 15
+                      failureThreshold: 5
+                  ports:
+                      - containerPort: 5000
+                  envFrom:
+                      - secretRef:
+                            name: frontend-secrets
