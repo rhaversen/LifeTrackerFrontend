@@ -37,4 +37,31 @@ body {
 	.text-balance {
 		text-wrap: balance;
 	}
+
+	/* Hide scrollbar for Chrome, Safari and Opera */
+	.no-scrollbar::-webkit-scrollbar {
+		display: none;
+	}
+
+	/* Hide scrollbar for IE, Edge and Firefox */
+	.no-scrollbar {
+		-ms-overflow-style: none; /* IE and Edge */
+		scrollbar-width: none; /* Firefox */
+	}
+}
+
+@keyframes bounceOrig {
+	0%,
+	100% {
+		transform: translateY(0);
+		animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+	}
+	50% {
+		transform: translateY(25%);
+		animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+	}
+}
+
+.hover\:bounceOrig:hover {
+	animation: bounceOrig 1s infinite;
 }
