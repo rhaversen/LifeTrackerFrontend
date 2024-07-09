@@ -9,10 +9,11 @@ spec:
     ingressClassName: nginx
     tls:
         -   hosts:
-                - staging.kantine.nyskivehus.dk
+                - www.life-stats.net
+                - life-stats.net
             secretName: frontend-tls
     rules:
-        -   host: staging.kantine.nyskivehus.dk
+        -   host: life-stats.net
             http:
                 paths:
                     -   backend:
