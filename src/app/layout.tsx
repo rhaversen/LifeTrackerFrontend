@@ -1,3 +1,4 @@
+import ErrorProvider from '@/contexts/ErrorContext/ErrorProvider'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
@@ -17,7 +18,11 @@ export default function RootLayout ({
 }>): ReactElement {
 	return (
 		<html lang="en">
-			<body className={inter.className}>{children}</body>
+			<body className={inter.className}>
+				<ErrorProvider>
+					{children}
+				</ErrorProvider>
+			</body>
 		</html>
 	)
 }
