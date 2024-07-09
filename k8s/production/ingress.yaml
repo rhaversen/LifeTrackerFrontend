@@ -13,7 +13,7 @@ spec:
                 - life-stats.net
             secretName: frontend-tls
     rules:
-        -   host: kantine.nyskivehus.dk
+        -   host: life-stats.net
             http:
                 paths:
                     -   backend:
