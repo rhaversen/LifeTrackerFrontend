@@ -2,8 +2,8 @@ import { type MetadataRoute } from 'next'
 
 export default function manifest (): MetadataRoute.Manifest {
 	return {
-		name: 'Life Tracker',
-		short_name: 'Life Tracker',
+		name: 'Life Stats',
+		short_name: 'Life Stats',
 		start_url: '/',
 		display: 'standalone',
 		background_color: '#fff',
