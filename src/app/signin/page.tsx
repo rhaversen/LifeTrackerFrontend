@@ -51,7 +51,7 @@ export default function Page (): ReactElement {
 				<p className="text-sm text-gray-600">Forgot password? <a href="/request-password-reset" className="font-medium text-indigo-600 hover:text-indigo-500">Reset it</a></p>
 			</div>
 			<div className="mt-4">
-				<p className="text-sm text-gray-600">Don't have an account? <a href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">Sign Up</a></p>
+				<p className="text-sm text-gray-600">Don&apos;t have an account? <a href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">Sign Up</a></p>
 			</div>
 		</main>
 	)

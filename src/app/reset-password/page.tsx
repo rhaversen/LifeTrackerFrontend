@@ -9,7 +9,7 @@ export default function Page (): ReactElement {
 
 	const searchParams = useSearchParams()
 	const passwordResetCode = searchParams.get('passwordResetCode')
-  
+
 	const resetPassword = useCallback(async (credentials: any) => {
 		try {
 			console.log(credentials)
@@ -29,12 +29,12 @@ export default function Page (): ReactElement {
 			confirmPassword: formData.get('confirmPassword')
 		}
 		resetPassword(credentials).catch(console.error)
-	}, [resetPassword])
+	}, [resetPassword, passwordResetCode])
 
 	return (
 		<main className="flex flex-col items-center justify-center min-h-screen bg-gray-100 text-black">
 			<form className="w-full max-w-sm flex flex-col justify-between space-y-5" onSubmit={handleSubmit}>
-			<div className="space-y-2">
+				<div className="space-y-2">
 					<label htmlFor="password" className="block text-sm font-medium text-gray-700">New Password</label>
 					<input type="password" id="password" name="password" className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
 				</div>

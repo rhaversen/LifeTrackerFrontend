@@ -8,7 +8,7 @@ export default function Page (): ReactElement {
 
 	const requestPasswordReset = useCallback(async (credentials: any) => {
 		try {
-			const response = await axios.post(`${API_URL}/v1/users/request-password-reset-email`, credentials,)
+			const response = await axios.post(`${API_URL}/v1/users/request-password-reset-email`, credentials)
 			console.log(response.status)
 		} catch (error: any) {
 			console.error(error)
@@ -19,7 +19,7 @@ export default function Page (): ReactElement {
 		event.preventDefault() // Prevent default form submission
 		const formData = new FormData(event.currentTarget)
 		const credentials = {
-			email: formData.get('email'),
+			email: formData.get('email')
 		}
 		requestPasswordReset(credentials).catch(console.error)
 	}, [requestPasswordReset])
