@@ -25,7 +25,7 @@ export default function Page (): ReactElement {
 			confirmPassword: formData.get('confirmPassword')
 		}
 		await postUser(user)
-	}, [])
+	}, [postUser])
 
 	return (
 		<main className="flex flex-col items-center justify-center min-h-screen bg-gray-100 text-black">

@@ -24,7 +24,7 @@ export default function Page (): ReactElement {
 			stayLoggedIn: formData.get('stayLoggedIn') === 'on' // Convert on to boolean
 		}
 		await login(credentials)
-	}, [])
+	}, [login])
 
 	return (
 		<main className="flex flex-col items-center justify-center min-h-screen bg-gray-100 text-black">
