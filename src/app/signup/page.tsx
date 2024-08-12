@@ -10,7 +10,6 @@ export default function Page(): ReactElement {
 		try {
 			const response = await axios.post(`${API_URL}/v1/users`, user)
 			console.log(response.status)
-			console.log(response.data)
 		} catch (error: any) {
 			console.error(error)
 		}
