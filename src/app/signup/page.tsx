@@ -3,7 +3,7 @@
 import axios from 'axios'
 import React, { useCallback, type ReactElement } from 'react'
 
-export default function Page(): ReactElement {
+export default function Page (): ReactElement {
 	const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 	const postUser = useCallback(async (user: any) => {
@@ -16,7 +16,7 @@ export default function Page(): ReactElement {
 	}, [API_URL])
 
 	const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault()  // Prevent default form submission
+		event.preventDefault() // Prevent default form submission
 		const formData = new FormData(event.currentTarget)
 		const user = {
 			userName: formData.get('name'),
