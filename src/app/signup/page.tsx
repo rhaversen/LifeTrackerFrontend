@@ -15,7 +15,7 @@ export default function Page (): ReactElement {
 		}
 	}, [API_URL])
 
-	const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
+	const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault() // Prevent default form submission
 		const formData = new FormData(event.currentTarget)
 		const user = {
@@ -24,7 +24,7 @@ export default function Page (): ReactElement {
 			password: formData.get('password'),
 			confirmPassword: formData.get('confirmPassword')
 		}
-		await postUser(user)
+		postUser(user).catch(console.error)
 	}, [postUser])
 
 	return (

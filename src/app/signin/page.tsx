@@ -15,7 +15,7 @@ export default function Page (): ReactElement {
 		}
 	}, [API_URL])
 
-	const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
+	const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault() // Prevent default form submission
 		const formData = new FormData(event.currentTarget)
 		const credentials = {
@@ -23,7 +23,7 @@ export default function Page (): ReactElement {
 			password: formData.get('password'),
 			stayLoggedIn: formData.get('stayLoggedIn') === 'on' // Convert on to boolean
 		}
-		await login(credentials)
+		login(credentials).catch(console.error)
 	}, [login])
 
 	return (
