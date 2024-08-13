@@ -47,6 +47,12 @@ export default function Page (): ReactElement {
 					<button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Sign In</button>
 				</div>
 			</form>
+			<div className="mt-4">
+				<p className="text-sm text-gray-600">Forgot password? <a href="/request-password-reset" className="font-medium text-indigo-600 hover:text-indigo-500">Reset it</a></p>
+			</div>
+			<div className="mt-4">
+				<p className="text-sm text-gray-600">Don&apos;t have an account? <a href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">Sign Up</a></p>
+			</div>
 		</main>
 	)
 }
