@@ -3,14 +3,14 @@ import { type Metadata } from 'next'
 export const metadata: Metadata = {
 	title: {
 		template: '%s | Life Stats',
-		default: 'Sign Up'
+		default: 'Visualize'
 	},
 	alternates: {
-		canonical: 'https://life-stats.net/signup'
+		canonical: 'https://life-stats.net/visualize'
 	}
 }
 
-export default function SignupLayout ({
+export default function VisualizeLayout ({
 	children
 }: Readonly<{
 	children: React.ReactNode
