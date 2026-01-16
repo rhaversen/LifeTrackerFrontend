@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import Chart from 'chart.js/auto'
 import axios from 'axios'
 import { type ChartDataset } from 'chart.js'
+import Chart from 'chart.js/auto'
+import React, { useEffect, useState } from 'react'
 
 type ChartDatasetWithBackground = ChartDataset<'bar', number[]> & {
 	backgroundColor: string
@@ -42,8 +42,8 @@ const Page: React.FC = () => {
 
 				data.forEach(({ trackName, date }) => {
 					const dateOnly = date.split('T')[0]
-					if (aggregatedData[dateOnly] === undefined) aggregatedData[dateOnly] = {}
-					if (aggregatedData[dateOnly][trackName] === undefined) aggregatedData[dateOnly][trackName] = 0
+					if (aggregatedData[dateOnly] === undefined) { aggregatedData[dateOnly] = {} }
+					if (aggregatedData[dateOnly][trackName] === undefined) { aggregatedData[dateOnly][trackName] = 0 }
 					aggregatedData[dateOnly][trackName] += 1
 				})
 
@@ -106,7 +106,7 @@ const Page: React.FC = () => {
 
 	return (
 		<div>
-			<h1>User Tracking Data</h1>
+			<h1>{'User Tracking Data'}</h1>
 			<canvas id="myChart"></canvas>
 		</div>
 	)
