@@ -31,3 +31,14 @@ jobs:
 
             -   name: Lint tests
                 run: npm run lint
+    spellcheck:
+        runs-on: ubuntu-latest
+        steps:
+            -   name: Checkout repository
+                uses: actions/checkout@v4
+
+            -   name: Setup environment
+                uses: ./.github/actions/setup
+
+            -   name: Run spellcheck
+                run: npm run spellcheck
