@@ -5,7 +5,7 @@ on:
         branches: [ "development" ]
 
 jobs:
-    build:
+    build-and-test-image:
         runs-on: ubuntu-latest
         steps:
             -   name: Checkout repository
@@ -17,11 +17,8 @@ jobs:
             -   name: Build
                 run: npm run build
 
-            -   name: Archive production artifacts
-                uses: actions/upload-artifact@v4
-                with:
-                    name: .next
-                    path: .next
+            -   name: Build Docker image
+                uses: ./.github/actions/build-dockerfile
 
     test-lint:
         runs-on: ubuntu-latest
@@ -34,19 +31,14 @@ jobs:
 
             -   name: Lint tests
                 run: npm run lint
-
-    test-image:
-        needs: build
+    spellcheck:
         runs-on: ubuntu-latest
         steps:
             -   name: Checkout repository
                 uses: actions/checkout@v4
 
-            -   name: Download production artifacts
-                uses: actions/download-artifact@v4
-                with:
-                    name: .next
-                    path: .next
+            -   name: Setup environment
+                uses: ./.github/actions/setup
 
-            -   name: Build Docker image
-                uses: ./.github/actions/build-dockerfile
+            -   name: Run spellcheck
+                run: npm run spellcheck
