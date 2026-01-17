@@ -5,11 +5,11 @@ import { FlatCompat } from '@eslint/eslintrc'
 import stylistic from '@stylistic/eslint-plugin'
 import tsEslintPlugin from '@typescript-eslint/eslint-plugin'
 import tsParser from '@typescript-eslint/parser'
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals'
+import nextTypescript from 'eslint-config-next/typescript'
 import importPlugin from 'eslint-plugin-import'
 import nPlugin from 'eslint-plugin-n'
 import promisePlugin from 'eslint-plugin-promise'
-import reactPlugin from 'eslint-plugin-react'
-import reactHooksPlugin from 'eslint-plugin-react-hooks'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -26,24 +26,20 @@ const eslintConfig = [
 			'jest.setup.ts'
 		]
 	},
-	...compat.extends(
-		'next/core-web-vitals',
-		'next/typescript',
-		'prettier',
-		'plugin:import/typescript',
-		'plugin:import/errors',
-		'plugin:import/warnings',
-		'plugin:promise/recommended',
-		'plugin:n/recommended'
-	),
+	...nextCoreWebVitals,
+	...nextTypescript,
+	...compat.extends('prettier'),
+	...compat.extends('plugin:import/typescript'),
+	...compat.extends('plugin:import/errors'),
+	...compat.extends('plugin:import/warnings'),
+	...compat.extends('plugin:promise/recommended'),
+	...compat.extends('plugin:n/recommended'),
 	{
 		plugins: {
 			'@stylistic': stylistic,
 			import: importPlugin,
 			n: nPlugin,
 			promise: promisePlugin,
-			react: reactPlugin,
-			'react-hooks': reactHooksPlugin,
 			'@typescript-eslint': tsEslintPlugin
 		},
 		languageOptions: {
