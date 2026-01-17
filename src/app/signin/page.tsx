@@ -6,25 +6,24 @@ import React, { useCallback, type ReactElement } from 'react'
 export default function Page (): ReactElement {
 	const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-	const login = useCallback(async (credentials: any) => {
+	const signin = useCallback(async (credentials: { email: string, password: string }) => {
 		try {
-			const response = await axios.post(`${API_URL}/v1/auth/login-local`, credentials, { withCredentials: true })
+			const response = await axios.post(`${API_URL}/v1/users/signin`, credentials, { withCredentials: true })
 			console.log(response.status)
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error(error)
 		}
 	}, [API_URL])
 
 	const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault() // Prevent default form submission
+		event.preventDefault()
 		const formData = new FormData(event.currentTarget)
-		const credentials = {
-			email: formData.get('email'),
-			password: formData.get('password'),
-			stayLoggedIn: formData.get('stayLoggedIn') === 'on' // Convert on to boolean
+		const email = formData.get('email')
+		const password = formData.get('password')
+		if (typeof email === 'string' && typeof password === 'string') {
+			signin({ email, password }).catch(console.error)
 		}
-		login(credentials).catch(console.error)
-	}, [login])
+	}, [signin])
 
 	return (
 		<main className="flex flex-col items-center justify-center min-h-screen bg-gray-100 text-black">

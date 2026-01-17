@@ -9,25 +9,24 @@ function ResetPasswordForm (): ReactElement {
 	const searchParams = useSearchParams()
 	const passwordResetCode = searchParams.get('passwordResetCode')
 
-	const resetPassword = useCallback(async (credentials: any) => {
+	const resetPassword = useCallback(async (credentials: { passwordResetCode: string | null, password: string, confirmPassword: string }) => {
 		try {
 			console.log(credentials)
 			const response = await axios.patch(`${API_URL}/v1/users/reset-password`, credentials, { withCredentials: true })
 			console.log(response.status)
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error(error)
 		}
 	}, [API_URL])
 
 	const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault() // Prevent default form submission
+		event.preventDefault()
 		const formData = new FormData(event.currentTarget)
-		const credentials = {
-			passwordResetCode,
-			password: formData.get('password'),
-			confirmPassword: formData.get('confirmPassword')
+		const password = formData.get('password')
+		const confirmPassword = formData.get('confirmPassword')
+		if (typeof password === 'string' && typeof confirmPassword === 'string') {
+			resetPassword({ passwordResetCode, password, confirmPassword }).catch(console.error)
 		}
-		resetPassword(credentials).catch(console.error)
 	}, [resetPassword, passwordResetCode])
 
 	return (

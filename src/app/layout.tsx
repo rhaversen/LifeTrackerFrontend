@@ -1,9 +1,10 @@
-import ErrorProvider from '@/contexts/ErrorContext/ErrorProvider'
-
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import './globals.css'
 import { type ReactElement } from 'react'
+
+import ErrorProvider from '@/contexts/ErrorContext/ErrorProvider'
+
+import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
 

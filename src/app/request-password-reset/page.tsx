@@ -6,11 +6,11 @@ import React, { useCallback, type ReactElement } from 'react'
 export default function Page (): ReactElement {
 	const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-	const requestPasswordReset = useCallback(async (credentials: any) => {
+	const requestPasswordReset = useCallback(async (credentials: { email: string }) => {
 		try {
 			const response = await axios.post(`${API_URL}/v1/users/request-password-reset-email`, credentials)
 			console.log(response.status)
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error(error)
 		}
 	}, [API_URL])
@@ -18,10 +18,10 @@ export default function Page (): ReactElement {
 	const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault() // Prevent default form submission
 		const formData = new FormData(event.currentTarget)
-		const credentials = {
-			email: formData.get('email')
+		const email = formData.get('email')
+		if (typeof email === 'string') {
+			requestPasswordReset({ email }).catch(console.error)
 		}
-		requestPasswordReset(credentials).catch(console.error)
 	}, [requestPasswordReset])
 
 	return (
