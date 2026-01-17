@@ -31,7 +31,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 const Page: React.FC = () => {
 	const [chartData, setChartData] = useState<ChartDataStructure>({})
-	const chartRef = React.useRef<Chart>()
+	const chartRef = React.useRef<Chart | null>(null)
 
 	useEffect(() => {
 		const fetchData = async (): Promise<void> => {
