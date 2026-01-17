@@ -23,7 +23,8 @@ const eslintConfig = [
 		ignores: [
 			'coverage/**',
 			'jest.config.js',
-			'jest.setup.ts'
+			'jest.setup.ts',
+			'next.config.mjs'
 		]
 	},
 	...nextCoreWebVitals,
@@ -45,7 +46,7 @@ const eslintConfig = [
 		languageOptions: {
 			parser: tsParser,
 			parserOptions: {
-				project: './tsconfig.json',
+				projectService: true,
 				ecmaVersion: 'latest',
 				sourceType: 'module',
 				ecmaFeatures: { jsx: true }
