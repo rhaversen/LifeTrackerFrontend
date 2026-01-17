@@ -1,8 +1,9 @@
 'use client'
 
+import React, { type ReactNode, useCallback, useState } from 'react'
+
 import ErrorWindow from '@/components/ui/ErrorWindow'
 import { ErrorContext, type ErrorInfo } from '@/contexts/ErrorContext/ErrorContext'
-import React, { type ReactNode, useCallback, useState } from 'react'
 
 interface ErrorProviderProps {
 	children: ReactNode

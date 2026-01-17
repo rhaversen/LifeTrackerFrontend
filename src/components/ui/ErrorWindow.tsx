@@ -17,15 +17,15 @@ const ErrorWindow = ({
 	const [showError, setShowError] = useState(false)
 
 	const errorMessage = ((): string => {
-		if (error === undefined || error === null) return ''
-		if (typeof error === 'string') return error
+		if (error === undefined || error === null) { return '' }
+		if (typeof error === 'string') { return error }
 		if (typeof error === 'object') {
 			if (error instanceof AxiosError) {
-				if (error.response?.data !== undefined && error.response?.data !== '') return error.response.data.error
-				if (error.message !== undefined && error.message !== '') return error.message
+				if (error.response?.data !== undefined && error.response?.data !== '') { return error.response.data.error }
+				if (error.message !== undefined && error.message !== '') { return error.message }
 				return JSON.stringify(error)
 			}
-			if (error instanceof Error) return error.message
+			if (error instanceof Error) { return error.message }
 		}
 		return JSON.stringify(error)
 	})()
@@ -63,7 +63,7 @@ const ErrorWindow = ({
 		>
 			<div className="right-0 top-5 flex flex-row p-2">
 				<div className="flex flex-col justify-center items-center">
-					<h1 className="text-xl font-bold text-white">Der skete en fejl</h1>
+					<h1 className="text-xl font-bold text-white">{'Der skete en fejl'}</h1>
 					<p className="text-lg text-white">{errorMessage}</p>
 				</div>
 				<button
@@ -71,7 +71,7 @@ const ErrorWindow = ({
 					className="text-3xl p-3"
 					onClick={handleClose}
 				>
-					X
+					{'X\r'}
 				</button>
 			</div>
 			<div
