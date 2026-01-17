@@ -8,6 +8,8 @@ import tsParser from '@typescript-eslint/parser'
 import importPlugin from 'eslint-plugin-import'
 import nPlugin from 'eslint-plugin-n'
 import promisePlugin from 'eslint-plugin-promise'
+import reactPlugin from 'eslint-plugin-react'
+import reactHooksPlugin from 'eslint-plugin-react-hooks'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -26,6 +28,7 @@ const eslintConfig = [
 	},
 	...compat.extends(
 		'next/core-web-vitals',
+		'next/typescript',
 		'prettier',
 		'plugin:import/typescript',
 		'plugin:import/errors',
@@ -39,6 +42,8 @@ const eslintConfig = [
 			import: importPlugin,
 			n: nPlugin,
 			promise: promisePlugin,
+			react: reactPlugin,
+			'react-hooks': reactHooksPlugin,
 			'@typescript-eslint': tsEslintPlugin
 		},
 		languageOptions: {
