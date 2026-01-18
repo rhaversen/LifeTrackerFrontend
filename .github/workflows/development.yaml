@@ -2,43 +2,11 @@ name: Development Testing CI
 
 on:
     pull_request:
-        branches: [ "development" ]
+        branches: ["development"]
 
 jobs:
-    build-and-test-image:
-        runs-on: ubuntu-latest
-        steps:
-            -   name: Checkout repository
-                uses: actions/checkout@v4
-
-            -   name: Setup environment
-                uses: ./.github/actions/setup
-
-            -   name: Build
-                run: npm run build
-
-            -   name: Build Docker image
-                uses: ./.github/actions/build-dockerfile
-
-    test-lint:
-        runs-on: ubuntu-latest
-        steps:
-            -   name: Checkout repository
-                uses: actions/checkout@v4
-
-            -   name: Setup environment
-                uses: ./.github/actions/setup
-
-            -   name: Lint tests
-                run: npm run lint
-    spellcheck:
-        runs-on: ubuntu-latest
-        steps:
-            -   name: Checkout repository
-                uses: actions/checkout@v4
-
-            -   name: Setup environment
-                uses: ./.github/actions/setup
-
-            -   name: Run spellcheck
-                run: npm run spellcheck
+    test:
+        uses: rhaversen/.github/.github/workflows/development-frontend.yml@main
+        with:
+            node_version: "lts/*"
+            run_tests: false
