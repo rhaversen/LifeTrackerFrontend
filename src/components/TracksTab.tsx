@@ -11,11 +11,18 @@ export default function TracksTab (): ReactElement {
 	const [tracks, setTracks] = useState<Track[]>([])
 	const [loading, setLoading] = useState(true)
 	const [showProblematic, setShowProblematic] = useState(false)
+	const [page, setPage] = useState(1)
+	const [pageSize, setPageSize] = useState(100)
 
 	const fetchTracks = useCallback(async (): Promise<void> => {
+		setLoading(true)
 		try {
+			// Fetch all tracks to get problematic ones
 			const response = await axios.get<Track[]>(`${API_URL}/v1/tracks`, { withCredentials: true })
-			const sortedTracks = [...response.data]
+			const allTracks = response.data
+
+			// Sort all tracks
+			const sortedTracks = [...allTracks]
 				.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 			setTracks(sortedTracks)
 		} catch (error) {
@@ -28,6 +35,11 @@ export default function TracksTab (): ReactElement {
 	useEffect(() => {
 		fetchTracks().catch(console.error)
 	}, [fetchTracks])
+
+	useEffect(() => {
+		// Reset to page 1 when switching between views
+		setPage(1)
+	}, [showProblematic])
 
 	const handleDelete = useCallback(async (trackId: string): Promise<void> => {
 		if (!confirm('Are you sure you want to delete this track?')) {
@@ -56,7 +68,12 @@ export default function TracksTab (): ReactElement {
 
 	const problematicTracks = tracks.filter(track => isNaN(new Date(track.date).getTime()))
 	const validTracks = tracks.filter(track => !isNaN(new Date(track.date).getTime()))
-	const displayTracks = showProblematic ? problematicTracks : validTracks.slice(0, 100)
+
+	const currentTracks = showProblematic ? problematicTracks : validTracks
+	const totalPages = Math.ceil(currentTracks.length / pageSize)
+	const startIndex = (page - 1) * pageSize
+	const endIndex = startIndex + pageSize
+	const displayTracks = currentTracks.slice(startIndex, endIndex)
 
 	return (
 		<div className="space-y-6">
@@ -64,7 +81,7 @@ export default function TracksTab (): ReactElement {
 				<h2 className="text-2xl font-bold text-gray-200">
 					{showProblematic ? 'Problematic Tracks' : 'Latest Tracks'}
 				</h2>
-				<div className="flex items-center gap-4">
+				<div className="flex items-center gap-4 flex-wrap">
 					{problematicTracks.length > 0 && (
 						<button
 							onClick={() => setShowProblematic(!showProblematic)}
@@ -75,14 +92,31 @@ export default function TracksTab (): ReactElement {
 							}`}
 						>
 							{showProblematic
-								? `Show Valid Tracks`
+								? 'Show Valid Tracks'
 								: `Show ${problematicTracks.length} Problematic Track${problematicTracks.length !== 1 ? 's' : ''}`}
 						</button>
 					)}
-					<div className="text-gray-400 text-sm">
+					<div className="flex items-center gap-2">
+						<label htmlFor="pageSize" className="text-gray-400 text-sm whitespace-nowrap">{'Per page:'}</label>
+						<select
+							id="pageSize"
+							value={pageSize}
+							onChange={(e) => {
+								setPageSize(Number(e.target.value))
+								setPage(1)
+							}}
+							className="bg-gray-700 text-white text-sm px-2 py-1 rounded border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+						>
+							<option value={50}>{'50'}</option>
+							<option value={100}>{'100'}</option>
+							<option value={250}>{'250'}</option>
+							<option value={500}>{'500'}</option>
+						</select>
+					</div>
+					<div className="text-gray-400 text-sm whitespace-nowrap">
 						{showProblematic
 							? `${problematicTracks.length} problematic track${problematicTracks.length !== 1 ? 's' : ''}`
-							: `Showing ${Math.min(validTracks.length, 100)} of ${validTracks.length} valid tracks`}
+							: `${currentTracks.length} valid track${currentTracks.length !== 1 ? 's' : ''}`}
 					</div>
 				</div>
 			</div>
@@ -93,6 +127,48 @@ export default function TracksTab (): ReactElement {
 						<span className="font-bold">{'Warning: '}</span>
 						{'These tracks have invalid dates and will not appear in visualizations. You can delete them to clean up your data.'}
 					</p>
+				</div>
+			)}
+
+			{/* Pagination Controls */}
+			{totalPages > 1 && (
+				<div className="flex items-center justify-between flex-wrap gap-4 px-4">
+					<div className="text-gray-400 text-sm">
+						{`Showing ${startIndex + 1}-${Math.min(endIndex, currentTracks.length)} of ${currentTracks.length}`}
+					</div>
+					<div className="flex items-center gap-2">
+						<button
+							onClick={() => setPage(1)}
+							disabled={page === 1}
+							className="px-3 py-1 rounded bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+						>
+							{'First'}
+						</button>
+						<button
+							onClick={() => setPage(p => Math.max(1, p - 1))}
+							disabled={page === 1}
+							className="px-3 py-1 rounded bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+						>
+							{'Previous'}
+						</button>
+						<span className="text-gray-300 text-sm px-3">
+							{`Page ${page} of ${totalPages}`}
+						</span>
+						<button
+							onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+							disabled={page === totalPages}
+							className="px-3 py-1 rounded bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+						>
+							{'Next'}
+						</button>
+						<button
+							onClick={() => setPage(totalPages)}
+							disabled={page === totalPages}
+							className="px-3 py-1 rounded bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+						>
+							{'Last'}
+						</button>
+					</div>
 				</div>
 			)}
 
@@ -165,6 +241,48 @@ export default function TracksTab (): ReactElement {
 					</div>
 				)}
 			</div>
+
+			{/* Bottom Pagination Controls */}
+			{totalPages > 1 && (
+				<div className="flex items-center justify-between flex-wrap gap-4 px-4">
+					<div className="text-gray-400 text-sm">
+						{`Showing ${startIndex + 1}-${Math.min(endIndex, currentTracks.length)} of ${currentTracks.length}`}
+					</div>
+					<div className="flex items-center gap-2">
+						<button
+							onClick={() => setPage(1)}
+							disabled={page === 1}
+							className="px-3 py-1 rounded bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+						>
+							{'First'}
+						</button>
+						<button
+							onClick={() => setPage(p => Math.max(1, p - 1))}
+							disabled={page === 1}
+							className="px-3 py-1 rounded bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+						>
+							{'Previous'}
+						</button>
+						<span className="text-gray-300 text-sm px-3">
+							{`Page ${page} of ${totalPages}`}
+						</span>
+						<button
+							onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+							disabled={page === totalPages}
+							className="px-3 py-1 rounded bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+						>
+							{'Next'}
+						</button>
+						<button
+							onClick={() => setPage(totalPages)}
+							disabled={page === totalPages}
+							className="px-3 py-1 rounded bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+						>
+							{'Last'}
+						</button>
+					</div>
+				</div>
+			)}
 		</div>
 	)
 }
