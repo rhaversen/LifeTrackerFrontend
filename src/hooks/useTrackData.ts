@@ -176,3 +176,142 @@ export function useDeltaByTimeData (tracks: ProcessedTrack[]): { x: number, y: n
 			}))
 	}, [tracks])
 }
+
+export function useCalendarHeatmapData (tracks: ProcessedTrack[]): {
+	data: Map<string, number>
+	yearRange: { start: number, end: number }
+} {
+	return useMemo(() => {
+		const data = new Map<string, number>()
+		let minYear = new Date().getFullYear()
+		let maxYear = minYear
+
+		tracks.forEach(t => {
+			const dateKey = t.dateObj.toISOString().split('T')[0]
+			data.set(dateKey, (data.get(dateKey) || 0) + 1)
+			const year = t.dateObj.getFullYear()
+			minYear = Math.min(minYear, year)
+			maxYear = Math.max(maxYear, year)
+		})
+
+		return {
+			data,
+			yearRange: { start: minYear, end: maxYear }
+		}
+	}, [tracks])
+}
+
+export function useGapHistogramData (tracks: ProcessedTrack[]): {
+	bins: number[]
+	labels: string[]
+	maxGap: number
+} {
+	return useMemo(() => {
+		const gaps = tracks
+			.filter(t => t.deltaDays !== null && t.deltaDays > 0)
+			.map(t => t.deltaDays!)
+
+		if (gaps.length === 0) {
+			return { bins: [], labels: [], maxGap: 0 }
+		}
+
+		const maxGap = Math.max(...gaps)
+		const binCount = Math.min(Math.ceil(maxGap), 20)
+		const binSize = maxGap / binCount
+
+		const bins = new Array(binCount).fill(0)
+		gaps.forEach(gap => {
+			const binIndex = Math.min(Math.floor(gap / binSize), binCount - 1)
+			bins[binIndex]++
+		})
+
+		const labels = bins.map((_, i) => {
+			const start = (i * binSize).toFixed(1)
+			const end = ((i + 1) * binSize).toFixed(1)
+			return `${start}-${end}`
+		})
+
+		return { bins, labels, maxGap }
+	}, [tracks])
+}
+
+export interface BoxPlotStats {
+	min: number
+	q1: number
+	median: number
+	q3: number
+	max: number
+	outliers: number[]
+}
+
+function calculateBoxPlotStats (values: number[]): BoxPlotStats | null {
+	if (values.length === 0) return null
+
+	const sorted = [...values].sort((a, b) => a - b)
+	const q1Index = Math.floor(sorted.length * 0.25)
+	const medianIndex = Math.floor(sorted.length * 0.5)
+	const q3Index = Math.floor(sorted.length * 0.75)
+
+	const q1 = sorted[q1Index]
+	const median = sorted[medianIndex]
+	const q3 = sorted[q3Index]
+	const iqr = q3 - q1
+	const lowerFence = q1 - 1.5 * iqr
+	const upperFence = q3 + 1.5 * iqr
+
+	const outliers = sorted.filter(v => v < lowerFence || v > upperFence)
+	const nonOutliers = sorted.filter(v => v >= lowerFence && v <= upperFence)
+
+	return {
+		min: nonOutliers.length > 0 ? nonOutliers[0] : sorted[0],
+		q1,
+		median,
+		q3,
+		max: nonOutliers.length > 0 ? nonOutliers[nonOutliers.length - 1] : sorted[sorted.length - 1],
+		outliers
+	}
+}
+
+export function useWeekdayBoxPlotData (tracks: ProcessedTrack[]): {
+	stats: (BoxPlotStats | null)[]
+	labels: string[]
+} {
+	return useMemo(() => {
+		const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+		const dayGaps: number[][] = Array.from({ length: 7 }, () => [])
+
+		tracks.forEach(t => {
+			if (t.deltaDays !== null && t.deltaDays > 0) {
+				const dayIndex = (t.dateObj.getDay() + 6) % 7
+				dayGaps[dayIndex].push(t.deltaDays)
+			}
+		})
+
+		return {
+			stats: dayGaps.map(gaps => calculateBoxPlotStats(gaps)),
+			labels: days
+		}
+	}, [tracks])
+}
+
+export function useMonthlyBoxPlotData (tracks: ProcessedTrack[]): {
+	stats: (BoxPlotStats | null)[]
+	labels: string[]
+} {
+	return useMemo(() => {
+		const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+		const monthGaps: number[][] = Array.from({ length: 12 }, () => [])
+
+		tracks.forEach(t => {
+			if (t.deltaDays !== null && t.deltaDays > 0) {
+				const monthIndex = t.dateObj.getMonth()
+				monthGaps[monthIndex].push(t.deltaDays)
+			}
+		})
+
+		return {
+			stats: monthGaps.map(gaps => calculateBoxPlotStats(gaps)),
+			labels: months
+		}
+	}, [tracks])
+}

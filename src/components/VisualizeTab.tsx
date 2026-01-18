@@ -4,21 +4,28 @@ import axios from 'axios'
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
 
 import {
+	BoxPlot,
+	CalendarHeatmap,
 	DeltaByTimeScatter,
 	HeatmapChart,
+	Histogram,
 	LineScatterChart,
 	PolarChart,
 	TimeOfDayScatter,
 	WeekdayScatter
 } from '@/components/charts/Charts'
 import {
+	useCalendarHeatmapData,
 	useCumulativeData,
 	useDeltaByTimeData,
 	useDeltaDaysData,
 	useFrequencyData,
+	useGapHistogramData,
 	useHourlyDistribution,
+	useMonthlyBoxPlotData,
 	useProcessedTracks,
 	useTimeOfDayData,
+	useWeekdayBoxPlotData,
 	useWeekdayDistribution,
 	useWeekdayHeatmapData,
 	useWeekdayScatterData
@@ -67,6 +74,10 @@ export default function VisualizeTab (): ReactElement {
 	const weekdayDistribution = useWeekdayDistribution(processedTracks)
 	const weekdayHeatmapData = useWeekdayHeatmapData(processedTracks)
 	const deltaByTimeData = useDeltaByTimeData(processedTracks)
+	const calendarHeatmapData = useCalendarHeatmapData(processedTracks)
+	const gapHistogramData = useGapHistogramData(processedTracks)
+	const weekdayBoxPlotData = useWeekdayBoxPlotData(processedTracks)
+	const monthlyBoxPlotData = useMonthlyBoxPlotData(processedTracks)
 
 	const handleTrackChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
 		setSelectedTrackName(e.target.value)
@@ -98,6 +109,15 @@ export default function VisualizeTab (): ReactElement {
 					{`${filteredTracks.length} tracks`}
 				</div>
 			</div>
+
+			<section>
+				<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Activity Calendar'}</h2>
+				<CalendarHeatmap
+					title="Activity Calendar"
+					data={calendarHeatmapData.data}
+					yearRange={calendarHeatmapData.yearRange}
+				/>
+			</section>
 
 			<section>
 				<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Cumulative & Delta Days'}</h2>
@@ -177,6 +197,34 @@ export default function VisualizeTab (): ReactElement {
 					logScale={true}
 					className="h-80"
 				/>
+			</section>
+
+			<section>
+				<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Gap Distribution'}</h2>
+				<Histogram
+					title="Gap Histogram (Time Between Events)"
+					bins={gapHistogramData.bins}
+					labels={gapHistogramData.labels}
+					className="h-80"
+				/>
+			</section>
+
+			<section>
+				<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Gap Distribution by Period'}</h2>
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<BoxPlot
+						title="Gap by Weekday"
+						stats={weekdayBoxPlotData.stats}
+						labels={weekdayBoxPlotData.labels}
+						className="h-80"
+					/>
+					<BoxPlot
+						title="Gap by Month"
+						stats={monthlyBoxPlotData.stats}
+						labels={monthlyBoxPlotData.labels}
+						className="h-80"
+					/>
+				</div>
 			</section>
 		</div>
 	)
