@@ -1,115 +1,190 @@
 'use client'
 
 import axios from 'axios'
-import { type ChartDataset } from 'chart.js'
-import Chart from 'chart.js/auto'
-import React, { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
 
-type ChartDatasetWithBackground = ChartDataset<'bar', number[]> & {
-	backgroundColor: string
-	borderColor: string
-}
+import {
+	DeltaByTimeScatter,
+	HeatmapChart,
+	LineScatterChart,
+	PolarChart,
+	TimeOfDayScatter,
+	WeekdayScatter
+} from '@/components/charts/Charts'
+import {
+	useCumulativeData,
+	useDeltaByTimeData,
+	useDeltaDaysData,
+	useFrequencyData,
+	useHourlyDistribution,
+	useProcessedTracks,
+	useTimeOfDayData,
+	useWeekdayDistribution,
+	useWeekdayHeatmapData,
+	useWeekdayScatterData
+} from '@/hooks/useTrackData'
+import type { Track } from '@/types/Track'
 
-interface TrackingData {
-	trackName: string
-	date: string // ISO datetime format
-}
-
-type ChartDataStructure = Record<string, Record<string, number>>
-
-const colors = [
-	'rgba(255, 99, 132, 0.2)', // Red
-	'rgba(54, 162, 235, 0.2)', // Blue
-	'rgba(255, 206, 86, 0.2)', // Yellow
-	'rgba(75, 192, 192, 0.2)', // Green
-	'rgba(153, 102, 255, 0.2)', // Purple
-	'rgba(255, 159, 64, 0.2)', // Orange
-	'rgba(199, 199, 199, 0.2)' // Grey
-	// Add more colors as needed
-]
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-const Page: React.FC = () => {
-	const [chartData, setChartData] = useState<ChartDataStructure>({})
-	const chartRef = React.useRef<Chart | null>(null)
+export default function Page (): ReactElement {
+	const [tracks, setTracks] = useState<Track[]>([])
+	const [selectedTrackName, setSelectedTrackName] = useState<string>('')
+	const [loading, setLoading] = useState(true)
 
 	useEffect(() => {
 		const fetchData = async (): Promise<void> => {
 			try {
-				const response = await axios.get(`${API_URL}/v1/tracks`, { withCredentials: true })
-				const data: TrackingData[] = response.data
-				const aggregatedData: ChartDataStructure = {}
-
-				data.forEach(({ trackName, date }) => {
-					const dateOnly = date.split('T')[0]
-					if (aggregatedData[dateOnly] === undefined) { aggregatedData[dateOnly] = {} }
-					if (aggregatedData[dateOnly][trackName] === undefined) { aggregatedData[dateOnly][trackName] = 0 }
-					aggregatedData[dateOnly][trackName] += 1
-				})
-
-				setChartData(aggregatedData)
+				const response = await axios.get<Track[]>(`${API_URL}/v1/tracks`, { withCredentials: true })
+				setTracks(response.data)
+				const trackNames = [...new Set(response.data.map(t => t.trackName))]
+				if (trackNames.length > 0 && !selectedTrackName) {
+					setSelectedTrackName(trackNames[0])
+				}
 			} catch (error) {
 				console.error('Failed to fetch tracking data:', error)
+			} finally {
+				setLoading(false)
 			}
 		}
 
 		fetchData().catch(console.error)
+	}, [selectedTrackName])
+
+	const trackNames = useMemo(() => [...new Set(tracks.map(t => t.trackName))].sort(), [tracks])
+
+	const filteredTracks = useMemo(() =>
+		tracks.filter(t => t.trackName === selectedTrackName),
+	[tracks, selectedTrackName])
+
+	const processedTracks = useProcessedTracks(filteredTracks)
+	const cumulativeData = useCumulativeData(processedTracks)
+	const deltaDaysData = useDeltaDaysData(processedTracks)
+	const frequencyData = useFrequencyData(processedTracks)
+	const timeOfDayData = useTimeOfDayData(processedTracks)
+	const hourlyDistribution = useHourlyDistribution(processedTracks)
+	const weekdayScatterData = useWeekdayScatterData(processedTracks)
+	const weekdayDistribution = useWeekdayDistribution(processedTracks)
+	const weekdayHeatmapData = useWeekdayHeatmapData(processedTracks)
+	const deltaByTimeData = useDeltaByTimeData(processedTracks)
+
+	const handleTrackChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+		setSelectedTrackName(e.target.value)
 	}, [])
 
-	useEffect(() => {
-		if (Object.keys(chartData).length > 0) {
-			const canvas = document.getElementById('myChart') as HTMLCanvasElement
-			const ctx = canvas.getContext('2d')
-			if (ctx !== null) {
-				if (chartRef.current !== undefined && chartRef.current !== null) {
-					chartRef.current.destroy()
-				}
-
-				const datasets: ChartDatasetWithBackground[] = [] // Explicitly typed
-				const trackNames = Array.from(new Set(Object.values(chartData).flatMap(Object.keys)))
-				const dates = Object.keys(chartData).sort()
-
-				trackNames.forEach((trackName, index) => {
-					const colorIndex = index % colors.length
-					const backgroundColor = colors[colorIndex]
-					const borderColor = backgroundColor.replace('0.2', '1')
-
-					const data = dates.map(date => chartData[date][trackName] ?? 0)
-					datasets.push({
-						label: trackName,
-						data,
-						backgroundColor,
-						borderColor,
-						borderWidth: 1
-					})
-				})
-
-				chartRef.current = new Chart(ctx, {
-					type: 'bar',
-					data: {
-						labels: dates,
-						datasets
-					},
-					options: {
-						scales: {
-							y: {
-								beginAtZero: true
-							}
-						}
-					}
-				})
-			} else {
-				console.error('Failed to get the 2D context')
-			}
-		}
-	}, [chartData])
+	if (loading) {
+		return (
+			<div className="min-h-screen bg-gray-900 flex items-center justify-center">
+				<div className="text-gray-300 text-xl">{'Loading...'}</div>
+			</div>
+		)
+	}
 
 	return (
-		<div>
-			<h1>{'User Tracking Data'}</h1>
-			<canvas id="myChart"></canvas>
+		<div className="min-h-screen bg-gray-900">
+			<header className="sticky top-0 z-10 bg-gray-800 border-b border-gray-700 px-6 py-4">
+				<div className="max-w-7xl mx-auto flex items-center justify-between">
+					<h1 className="text-2xl font-bold text-white">{'Track Visualizations'}</h1>
+					<div className="flex items-center gap-4">
+						<label htmlFor="trackSelect" className="text-gray-300">{'Track Type:'}</label>
+						<select
+							id="trackSelect"
+							value={selectedTrackName}
+							onChange={handleTrackChange}
+							className="bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+						>
+							{trackNames.map(name => (
+								<option key={name} value={name}>{name}</option>
+							))}
+						</select>
+						<div className="text-gray-400 text-sm">
+							{`${filteredTracks.length} tracks`}
+						</div>
+					</div>
+				</div>
+			</header>
+
+			<main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+				<section>
+					<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Cumulative & Delta Days'}</h2>
+					<LineScatterChart
+						title="Cumulative Count & Delta Days (Log Scale)"
+						lineData={cumulativeData}
+						scatterData={deltaDaysData}
+						lineLabel="Cumulative Count"
+						scatterLabel="Delta Days"
+						yAxisLabel="Count / Days"
+						logScale={true}
+						className="h-80"
+					/>
+				</section>
+
+				<section>
+					<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Frequency Analysis'}</h2>
+					<LineScatterChart
+						title="Tracks Per Day - Rolling Averages"
+						lineData={frequencyData.monthlyAvg}
+						scatterData={frequencyData.weeklyAvg}
+						lineLabel="Monthly Avg"
+						scatterLabel="Weekly Avg"
+						yAxisLabel="Tracks per Day"
+						useSingleAxis={true}
+						className="h-80"
+					/>
+				</section>
+
+				<section>
+					<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Time of Day Analysis'}</h2>
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+						<TimeOfDayScatter
+							title="Time of Day by Date"
+							data={timeOfDayData}
+							className="h-80"
+						/>
+						<PolarChart
+							title="Hourly Distribution"
+							data={hourlyDistribution.data}
+							labels={hourlyDistribution.labels}
+							className="h-80"
+						/>
+					</div>
+				</section>
+
+				<section>
+					<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Weekday Analysis'}</h2>
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+						<WeekdayScatter
+							title="Delta Days by Weekday"
+							data={weekdayScatterData}
+							logScale={true}
+							className="h-80"
+						/>
+						<HeatmapChart
+							title="Weekday Heatmap"
+							data={weekdayHeatmapData.data}
+							xLabels={weekdayHeatmapData.xLabels}
+							yLabels={weekdayHeatmapData.yLabels}
+							className="h-80"
+						/>
+						<PolarChart
+							title="Weekday Distribution"
+							data={weekdayDistribution.data}
+							labels={weekdayDistribution.labels}
+							className="h-80"
+						/>
+					</div>
+				</section>
+
+				<section>
+					<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Delta Days by Time of Day'}</h2>
+					<DeltaByTimeScatter
+						title="Delta Days vs Hour of Day"
+						data={deltaByTimeData}
+						logScale={true}
+						className="h-80"
+					/>
+				</section>
+			</main>
 		</div>
 	)
 }
-
-export default Page
