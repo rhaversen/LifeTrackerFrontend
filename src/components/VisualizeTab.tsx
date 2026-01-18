@@ -38,16 +38,45 @@ export default function VisualizeTab (): ReactElement {
 	const [tracks, setTracks] = useState<Track[]>([])
 	const [selectedTrackName, setSelectedTrackName] = useState<string>('')
 	const [loading, setLoading] = useState(true)
+	const [trackNames, setTrackNames] = useState<string[]>([])
 
+	// Fetch only track names initially
 	useEffect(() => {
-		const fetchData = async (): Promise<void> => {
+		const fetchTrackNames = async (): Promise<void> => {
 			try {
-				const response = await axios.get<Track[]>(`${API_URL}/v1/tracks`, { withCredentials: true })
-				setTracks(response.data)
-				const trackNames = [...new Set(response.data.map(t => t.trackName))]
-				if (trackNames.length > 0 && !selectedTrackName) {
-					setSelectedTrackName(trackNames[0])
+				// Fetch all tracks to get all unique track names
+				const fullResponse = await axios.get<Track[]>(`${API_URL}/v1/tracks`, {
+					withCredentials: true
+				})
+				const allNames = [...new Set(fullResponse.data.map(t => t.trackName))].sort()
+				setTrackNames(allNames)
+
+				if (allNames.length > 0 && !selectedTrackName) {
+					setSelectedTrackName(allNames[0])
 				}
+			} catch (error) {
+				console.error('Failed to fetch track names:', error)
+			}
+		}
+
+		fetchTrackNames().catch(console.error)
+	}, [selectedTrackName])
+
+	// Fetch tracks for selected track name only
+	useEffect(() => {
+		if (!selectedTrackName) { return }
+
+		const fetchTracks = async (): Promise<void> => {
+			setLoading(true)
+			try {
+				const response = await axios.get<Track[]>(`${API_URL}/v1/tracks`, {
+					withCredentials: true,
+					params: {
+						trackName: selectedTrackName,
+						sort: '-date'
+					}
+				})
+				setTracks(response.data)
 			} catch (error) {
 				console.error('Failed to fetch tracking data:', error)
 			} finally {
@@ -55,10 +84,8 @@ export default function VisualizeTab (): ReactElement {
 			}
 		}
 
-		fetchData().catch(console.error)
+		fetchTracks().catch(console.error)
 	}, [selectedTrackName])
-
-	const trackNames = useMemo(() => [...new Set(tracks.map(t => t.trackName))].sort(), [tracks])
 
 	const filteredTracks = useMemo(() =>
 		tracks.filter(t => t.trackName === selectedTrackName),
@@ -90,7 +117,7 @@ export default function VisualizeTab (): ReactElement {
 	return (
 		<div className="space-y-6">
 			<div className="sticky top-[117px] sm:top-[73px] z-10 bg-gray-900 pt-4 pb-4 border-b border-gray-800 -mx-4 sm:-mx-6">
-				<div className="flex items-center gap-2 sm:gap-3 mb-3 px-4 sm:px-6">
+				<div className="flex items-center gap-2 sm:gap-3 mb-3 px-4 sm:px-6 flex-wrap">
 					<span className="text-gray-300 text-xs sm:text-sm font-medium whitespace-nowrap">{'Track Type:'}</span>
 					<span className="text-gray-400 text-xs sm:text-sm whitespace-nowrap">
 						{`${filteredTracks.length} tracks`}
