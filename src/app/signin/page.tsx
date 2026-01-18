@@ -6,9 +6,9 @@ import React, { useCallback, type ReactElement } from 'react'
 export default function Page (): ReactElement {
 	const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-	const signin = useCallback(async (credentials: { email: string, password: string }) => {
+	const signin = useCallback(async (credentials: { email: string, password: string, stayLoggedIn: boolean }) => {
 		try {
-			const response = await axios.post(`${API_URL}/v1/users/signin`, credentials, { withCredentials: true })
+			const response = await axios.post(`${API_URL}/v1/auth/login-local`, credentials, { withCredentials: true })
 			console.log(response.status)
 		} catch (error: unknown) {
 			console.error(error)
@@ -20,8 +20,9 @@ export default function Page (): ReactElement {
 		const formData = new FormData(event.currentTarget)
 		const email = formData.get('email')
 		const password = formData.get('password')
+		const stayLoggedIn = formData.get('stayLoggedIn') === 'on'
 		if (typeof email === 'string' && typeof password === 'string') {
-			signin({ email, password }).catch(console.error)
+			signin({ email, password, stayLoggedIn }).catch(console.error)
 		}
 	}, [signin])
 
