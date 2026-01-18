@@ -77,7 +77,7 @@ export default function Page (): ReactElement {
 			setRawTimes('')
 		} catch (error) {
 			console.error('Failed to import tracks:', error)
-			if (axios.isAxiosError(error) && error.response?.data?.error) {
+			if (axios.isAxiosError(error) && error.response?.data?.error != null) {
 				setStatus({ type: 'error', message: error.response.data.error })
 			} else {
 				setStatus({ type: 'error', message: 'Failed to import tracks' })
@@ -141,8 +141,8 @@ export default function Page (): ReactElement {
 					{status.message && (
 						<div className={`p-4 rounded-lg ${
 							status.type === 'success' ? 'bg-green-900 text-green-200' :
-							status.type === 'error' ? 'bg-red-900 text-red-200' :
-							'bg-blue-900 text-blue-200'
+								status.type === 'error' ? 'bg-red-900 text-red-200' :
+									'bg-blue-900 text-blue-200'
 						}`}>
 							<pre className="whitespace-pre-wrap font-mono text-sm">{status.message}</pre>
 						</div>
