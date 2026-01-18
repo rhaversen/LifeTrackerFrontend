@@ -4,7 +4,12 @@ import type { ProcessedTrack, Track } from '@/types/Track'
 
 export function useProcessedTracks (tracks: Track[]): ProcessedTrack[] {
 	return useMemo(() => {
-		const sorted = [...tracks].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+		const sorted = [...tracks]
+			.filter(track => {
+				const date = new Date(track.date)
+				return !isNaN(date.getTime())
+			})
+			.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
 		return sorted.map((track, index) => {
 			const dateObj = new Date(track.date)
