@@ -18,7 +18,7 @@ export default function Page (): ReactElement {
 			router.push('/')
 		} catch (error: unknown) {
 			if (axios.isAxiosError(error) && error.response) {
-				setError(error.response.data?.message || 'Invalid email or password')
+				setError(error.response.data?.message ?? 'Invalid email or password')
 			} else {
 				setError('An error occurred. Please try again.')
 			}
@@ -56,15 +56,15 @@ export default function Page (): ReactElement {
 						<span className="ml-2 block text-sm text-gray-900">{'Stay logged in'}</span>
 					</label>
 				</div>
-			{error && (
-				<div className="rounded-md bg-red-50 p-4">
-					<p className="text-sm text-red-800">{error}</p>
-				</div>
-			)}
-			<div>
-				<button type="submit" disabled={loading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-					{loading ? 'Signing in...' : 'Sign In'}
-				</button>
+				{error && (
+					<div className="rounded-md bg-red-50 p-4">
+						<p className="text-sm text-red-800">{error}</p>
+					</div>
+				)}
+				<div>
+					<button type="submit" disabled={loading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+						{loading ? 'Signing in...' : 'Sign In'}
+					</button>
 				</div>
 			</form>
 			<div className="mt-4">
