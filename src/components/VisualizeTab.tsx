@@ -79,10 +79,6 @@ export default function VisualizeTab (): ReactElement {
 	const weekdayBoxPlotData = useWeekdayBoxPlotData(processedTracks)
 	const monthlyBoxPlotData = useMonthlyBoxPlotData(processedTracks)
 
-	const handleTrackChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-		setSelectedTrackName(e.target.value)
-	}, [])
-
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center py-20">
@@ -93,20 +89,29 @@ export default function VisualizeTab (): ReactElement {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center gap-4">
-				<label htmlFor="trackSelect" className="text-gray-300">{'Track Type:'}</label>
-				<select
-					id="trackSelect"
-					value={selectedTrackName}
-					onChange={handleTrackChange}
-					className="bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-				>
-					{trackNames.map(name => (
-						<option key={name} value={name}>{name}</option>
-					))}
-				</select>
-				<div className="text-gray-400 text-sm">
-					{`${filteredTracks.length} tracks`}
+			<div className="sticky top-[117px] sm:top-[73px] z-10 bg-gray-900 pt-4 pb-4 border-b border-gray-800 -mx-4 sm:-mx-6">
+				<div className="flex items-center gap-2 sm:gap-3 mb-3 px-4 sm:px-6">
+					<span className="text-gray-300 text-xs sm:text-sm font-medium whitespace-nowrap">{'Track Type:'}</span>
+					<span className="text-gray-400 text-xs sm:text-sm whitespace-nowrap">
+						{`${filteredTracks.length} tracks`}
+					</span>
+				</div>
+				<div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 px-4 sm:px-6">
+					<div className="flex gap-2 pb-2">
+						{trackNames.map(name => (
+							<button
+								key={name}
+								onClick={() => setSelectedTrackName(name)}
+								className={`px-3 py-2 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
+									selectedTrackName === name
+										? 'bg-blue-600 text-white'
+										: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+								}`}
+							>
+								{name}
+							</button>
+						))}
+					</div>
 				</div>
 			</div>
 
