@@ -1,19 +1,21 @@
 'use client'
 
 import axios from 'axios'
+import { useRouter } from 'next/navigation'
 import React, { useCallback, type ReactElement } from 'react'
 
 export default function Page (): ReactElement {
 	const API_URL = process.env.NEXT_PUBLIC_API_URL
+	const router = useRouter()
 
 	const signin = useCallback(async (credentials: { email: string, password: string, stayLoggedIn: boolean }) => {
 		try {
-			const response = await axios.post(`${API_URL}/v1/auth/login-local`, credentials, { withCredentials: true })
-			console.log(response.status)
+			await axios.post(`${API_URL}/v1/auth/login-local`, credentials, { withCredentials: true })
+			router.push('/visualize')
 		} catch (error: unknown) {
 			console.error(error)
 		}
-	}, [API_URL])
+	}, [API_URL, router])
 
 	const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault()
