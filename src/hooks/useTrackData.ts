@@ -188,7 +188,7 @@ export function useCalendarHeatmapData (tracks: ProcessedTrack[]): {
 
 		tracks.forEach(t => {
 			const dateKey = t.dateObj.toISOString().split('T')[0]
-			data.set(dateKey, (data.get(dateKey) || 0) + 1)
+			data.set(dateKey, (data.get(dateKey) ?? 0) + 1)
 			const year = t.dateObj.getFullYear()
 			minYear = Math.min(minYear, year)
 			maxYear = Math.max(maxYear, year)
@@ -245,7 +245,7 @@ export interface BoxPlotStats {
 }
 
 function calculateBoxPlotStats (values: number[]): BoxPlotStats | null {
-	if (values.length === 0) return null
+	if (values.length === 0) { return null }
 
 	const sorted = [...values].sort((a, b) => a - b)
 	const q1Index = Math.floor(sorted.length * 0.25)

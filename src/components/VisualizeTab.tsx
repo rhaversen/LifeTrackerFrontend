@@ -1,7 +1,7 @@
 'use client'
 
 import axios from 'axios'
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
+import { useEffect, useMemo, useState, type ReactElement } from 'react'
 
 import {
 	BoxPlot,

@@ -544,10 +544,10 @@ export function CalendarHeatmap ({ title, data, yearRange, className = '' }: Cal
 	const [tooltip, setTooltip] = useState<{ x: number, y: number, date: string, count: number } | null>(null)
 
 	useEffect(() => {
-		if (!canvasRef.current) return
+		if (!canvasRef.current) { return }
 
 		const ctx = canvasRef.current.getContext('2d')
-		if (!ctx) return
+		if (!ctx) { return }
 
 		const canvas = canvasRef.current
 		const cellSize = 10
@@ -590,7 +590,7 @@ export function CalendarHeatmap ({ title, data, yearRange, className = '' }: Cal
 			const dayOfWeek = (d.getDay() + 6) % 7
 
 			const dateKey = d.toISOString().split('T')[0]
-			const count = data.get(dateKey) || 0
+			const count = data.get(dateKey) ?? 0
 
 			const x = labelWidth + weekNum * (cellSize + cellGap)
 			const y = 2 + dayOfWeek * (cellSize + cellGap)
@@ -636,7 +636,7 @@ export function CalendarHeatmap ({ title, data, yearRange, className = '' }: Cal
 			date.setDate(date.getDate() + daysSinceStart)
 
 			const dateKey = date.toISOString().split('T')[0]
-			const count = data.get(dateKey) || 0
+			const count = data.get(dateKey) ?? 0
 
 			setTooltip({
 				x: e.clientX - rect.left,
@@ -694,14 +694,14 @@ export function Histogram ({ title, bins, labels, className = '' }: HistogramPro
 	const chartRef = useRef<ChartJS | null>(null)
 
 	useEffect(() => {
-		if (!canvasRef.current) return
+		if (!canvasRef.current) { return }
 
 		if (chartRef.current) {
 			chartRef.current.destroy()
 		}
 
 		const ctx = canvasRef.current.getContext('2d')
-		if (!ctx) return
+		if (!ctx) { return }
 
 		chartRef.current = new ChartJS(ctx, {
 			type: 'bar',
@@ -759,10 +759,10 @@ export function BoxPlot ({ title, stats, labels, className = '' }: BoxPlotProps)
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 
 	useEffect(() => {
-		if (!canvasRef.current) return
+		if (!canvasRef.current) { return }
 
 		const ctx = canvasRef.current.getContext('2d')
-		if (!ctx) return
+		if (!ctx) { return }
 
 		const canvas = canvasRef.current
 		const width = canvas.width = canvas.offsetWidth * 2
@@ -831,7 +831,7 @@ export function BoxPlot ({ title, stats, labels, className = '' }: BoxPlotProps)
 			ctx.textAlign = 'center'
 			ctx.fillText(labels[i], x, height / 2 - padding.bottom + 15)
 
-			if (!stat) return
+			if (!stat) { return }
 
 			ctx.strokeStyle = 'rgba(59, 130, 246, 1)'
 			ctx.fillStyle = 'rgba(59, 130, 246, 0.3)'
