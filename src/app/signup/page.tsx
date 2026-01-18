@@ -6,7 +6,7 @@ import React, { useCallback, type ReactElement } from 'react'
 export default function Page (): ReactElement {
 	const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-	const postUser = useCallback(async (user: { email: string, password: string }) => {
+	const postUser = useCallback(async (user: { userName: string, email: string, password: string, confirmPassword: string }) => {
 		try {
 			const response = await axios.post(`${API_URL}/v1/users`, user)
 			console.log(response.status)
@@ -18,10 +18,12 @@ export default function Page (): ReactElement {
 	const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault()
 		const formData = new FormData(event.currentTarget)
+		const userName = formData.get('name')
 		const email = formData.get('email')
 		const password = formData.get('password')
-		if (typeof email === 'string' && typeof password === 'string') {
-			postUser({ email, password }).catch(console.error)
+		const confirmPassword = formData.get('confirmPassword')
+		if (typeof userName === 'string' && typeof email === 'string' && typeof password === 'string' && typeof confirmPassword === 'string') {
+			postUser({ userName, email, password, confirmPassword }).catch(console.error)
 		}
 	}, [postUser])
 
