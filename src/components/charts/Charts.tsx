@@ -325,7 +325,7 @@ export function WeekdayScatter ({ title, data, logScale = false, className = '' 
 			return
 		}
 
-		const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+		const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 		chartRef.current = new ChartJS(ctx, {
 			type: 'scatter',

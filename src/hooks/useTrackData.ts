@@ -16,7 +16,7 @@ export function useProcessedTracks (tracks: Track[]): ProcessedTrack[] {
 			return {
 				...track,
 				dateObj,
-				dayOfWeek: dateObj.getDay() + (dateObj.getHours() + dateObj.getMinutes() / 60) / 24,
+				dayOfWeek: (dateObj.getDay() + 6) % 7 + (dateObj.getHours() + dateObj.getMinutes() / 60) / 24,
 				hourOfDay: dateObj.getHours() + dateObj.getMinutes() / 60,
 				deltaDays
 			}
@@ -124,10 +124,11 @@ export function useWeekdayScatterData (tracks: ProcessedTrack[]): { x: number, y
 
 export function useWeekdayDistribution (tracks: ProcessedTrack[]): { data: number[], labels: string[] } {
 	return useMemo(() => {
-		const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+		const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 		const dayCounts = new Array(7).fill(0)
 		tracks.forEach(t => {
-			dayCounts[t.dateObj.getDay()]++
+			const dayIndex = (t.dateObj.getDay() + 6) % 7
+			dayCounts[dayIndex]++
 		})
 
 		return {
@@ -143,14 +144,14 @@ export function useWeekdayHeatmapData (tracks: ProcessedTrack[]): {
 	yLabels: string[]
 } {
 	return useMemo(() => {
-		const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+		const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 		const hours = Array.from({ length: 24 }, (_, i) => i)
 
 		// Matrix: rows = hours (y-axis), columns = days (x-axis)
 		const matrix: number[][] = hours.map(() => new Array(7).fill(0))
 
 		tracks.forEach(t => {
-			const dayIndex = t.dateObj.getDay()
+			const dayIndex = (t.dateObj.getDay() + 6) % 7
 			const hourIndex = Math.floor(t.hourOfDay)
 			if (hourIndex >= 0 && hourIndex < 24) {
 				matrix[hourIndex][dayIndex]++

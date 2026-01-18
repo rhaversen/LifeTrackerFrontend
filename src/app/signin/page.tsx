@@ -11,7 +11,7 @@ export default function Page (): ReactElement {
 	const signin = useCallback(async (credentials: { email: string, password: string, stayLoggedIn: boolean }) => {
 		try {
 			await axios.post(`${API_URL}/v1/auth/login-local`, credentials, { withCredentials: true })
-			router.push('/visualize')
+			router.push('/')
 		} catch (error: unknown) {
 			console.error(error)
 		}
