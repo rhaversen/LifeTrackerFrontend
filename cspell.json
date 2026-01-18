@@ -22,9 +22,6 @@
     "ignoreWords": [
         "chunkname",
         "tailwindcss",
-        "geist",
-        "Codacy",
-        "skete",
-        "fejl"
+        "chartjs"
     ]
 }
