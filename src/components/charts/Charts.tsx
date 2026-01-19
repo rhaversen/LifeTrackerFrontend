@@ -658,7 +658,7 @@ export function CalendarHeatmap ({ title, data, yearRange, dateRange, className 
 			canvas.removeEventListener('mousemove', handleMouseMove)
 			canvas.removeEventListener('mouseleave', handleMouseLeave)
 		}
-	}, [data, yearRange, title])
+	}, [data, yearRange, title, dateRange])
 
 	useEffect(() => {
 		if (containerRef.current) {

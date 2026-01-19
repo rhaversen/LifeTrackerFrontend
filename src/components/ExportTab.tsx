@@ -88,6 +88,7 @@ export default function ExportTab (): ReactElement {
 
 	const handleCopy = async (): Promise<void> => {
 		try {
+			// eslint-disable-next-line n/no-unsupported-features/node-builtins
 			await navigator.clipboard.writeText(exportedData)
 		} catch (err) {
 			console.error('Failed to copy:', err)
