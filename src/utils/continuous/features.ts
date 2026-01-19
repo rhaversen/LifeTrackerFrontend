@@ -9,8 +9,8 @@ export interface BaselineFeatures {
 
 export function computeBaselineFeatures (timeMs: number): BaselineFeatures {
 	const date = new Date(timeMs)
-	const hourOfDay = date.getHours() + date.getMinutes() / 60
-	const dayOfWeek = date.getDay()
+	const hourOfDay = date.getUTCHours() + date.getUTCMinutes() / 60
+	const dayOfWeek = date.getUTCDay()
 
 	const hourRadians = (2 * Math.PI * hourOfDay) / 24
 	const hour2Radians = (4 * Math.PI * hourOfDay) / 24

@@ -22,7 +22,8 @@ interface GraphEdge {
 	target: string
 	strength: number
 	direction: 'excite' | 'inhibit' | 'neutral'
-	peakLagLabel: string
+	massTimeLabel: string
+	hazardRatioAt1h: number
 }
 
 function getNodeColor (name: string): string {
@@ -157,7 +158,8 @@ export default function InfluenceGraph ({ edges, typeNames }: InfluenceGraphProp
 			target: e.targetType,
 			strength: e.strength,
 			direction: e.direction,
-			peakLagLabel: e.peakLagLabel
+			massTimeLabel: e.massTimeLabel,
+			hazardRatioAt1h: e.hazardRatioAt1h
 		}))
 	}, [edges])
 
@@ -368,9 +370,9 @@ export default function InfluenceGraph ({ edges, typeNames }: InfluenceGraphProp
 						<span className="text-white font-medium">{hoveredEdge.target}</span>
 					</div>
 					<div className="text-gray-400 text-xs mt-1">
-						<span>{`Strength: ${(hoveredEdge.strength * 100).toFixed(0)}%`}</span>
+						<span>{`HR@1h: ${hoveredEdge.hazardRatioAt1h.toFixed(2)}×`}</span>
 						<span className="mx-2">{'•'}</span>
-						<span>{`Peak: ${hoveredEdge.peakLagLabel}`}</span>
+						<span>{`50% by ${hoveredEdge.massTimeLabel}`}</span>
 					</div>
 				</div>
 			)}

@@ -102,7 +102,7 @@ export function findPeakLag (
 	maxLagHours: number = 7 * 24,
 	resolution: number = 200
 ): { peakLagMs: number; peakValue: number } {
-	const minLagHours = 1 / 3600
+	const minLagHours = 5 / 60
 
 	let peakLagHours = minLagHours
 	let peakValue = evaluateInfluenceCurve(theta, taus, minLagHours)
@@ -123,6 +123,41 @@ export function findPeakLag (
 	}
 
 	return { peakLagMs: peakLagHours * MS_PER_HOUR, peakValue }
+}
+
+export function findMassTime (
+	theta: Float64Array,
+	taus: number[],
+	fraction: number = 0.5,
+	maxLagHours: number = 7 * 24,
+	resolution: number = 500
+): { massTimeMs: number; totalIntegral: number } {
+	const totalIntegral = integratedEffect(theta, taus, maxLagHours)
+	if (Math.abs(totalIntegral) < 1e-10) {
+		return { massTimeMs: 0, totalIntegral: 0 }
+	}
+
+	const targetIntegral = Math.abs(totalIntegral) * fraction
+	let cumulative = 0
+	const minLagHours = 1 / 60
+	const ratio = maxLagHours / minLagHours
+
+	for (let i = 0; i < resolution; i++) {
+		const frac = i / Math.max(1, resolution - 1)
+		const lagHours = minLagHours * Math.pow(ratio, frac)
+		const nextFrac = (i + 1) / Math.max(1, resolution - 1)
+		const nextLagHours = minLagHours * Math.pow(ratio, nextFrac)
+		const dt = nextLagHours - lagHours
+
+		const g = evaluateInfluenceCurve(theta, taus, lagHours)
+		cumulative += Math.abs(g) * dt
+
+		if (cumulative >= targetIntegral) {
+			return { massTimeMs: lagHours * MS_PER_HOUR, totalIntegral }
+		}
+	}
+
+	return { massTimeMs: maxLagHours * MS_PER_HOUR, totalIntegral }
 }
 
 export function integratedEffect (

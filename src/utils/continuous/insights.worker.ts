@@ -110,9 +110,14 @@ async function runAnalysis (tracks: Track[], options: WorkerOptions): Promise<vo
 			targetType: e.targetType,
 			peakLagMs: e.peakLagMs,
 			peakLagLabel: e.peakLagLabel,
+			massTimeMs: e.massTimeMs,
+			massTimeLabel: e.massTimeLabel,
 			peakEffect: e.peakEffect,
 			integratedEffect: e.integratedEffect,
 			hazardRatioAtPeak: e.hazardRatioAtPeak,
+			hazardRatioAt15m: e.hazardRatioAt15m,
+			hazardRatioAt1h: e.hazardRatioAt1h,
+			hazardRatioAt6h: e.hazardRatioAt6h,
 			direction: e.direction,
 			strength: e.strength
 		}))

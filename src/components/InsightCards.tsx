@@ -150,8 +150,8 @@ interface InfluenceEdgeCardProps {
 	edge: {
 		sourceType: string
 		targetType: string
-		peakLagLabel: string
-		hazardRatioAtPeak: number
+		massTimeLabel: string
+		hazardRatioAt1h: number
 		direction: 'excite' | 'inhibit' | 'neutral'
 		strength: number
 	}
@@ -162,7 +162,7 @@ export function InfluenceEdgeCard ({ edge }: InfluenceEdgeCardProps): ReactEleme
 		? { emoji: '🛑', color: 'text-purple-400', borderColor: 'border-l-purple-500', arrow: '⊣' }
 		: { emoji: '⚡', color: 'text-orange-400', borderColor: 'border-l-orange-500', arrow: '→' }
 
-	const hrStr = edge.hazardRatioAtPeak.toFixed(2)
+	const hrStr = edge.hazardRatioAt1h.toFixed(2)
 	const strengthPercent = Math.round(edge.strength * 100)
 
 	return (
@@ -176,10 +176,10 @@ export function InfluenceEdgeCard ({ edge }: InfluenceEdgeCardProps): ReactEleme
 						{edge.targetType}
 					</span>
 				</div>
-				<span className={`text-sm font-bold ${config.color}`}>{`${hrStr}×`}</span>
+				<span className={`text-sm font-bold ${config.color}`}>{`${hrStr}× @1h`}</span>
 			</div>
 			<div className="flex flex-wrap gap-2 text-xs text-gray-500">
-				<span className="bg-gray-700/50 px-2 py-0.5 rounded">{`peak @ ${edge.peakLagLabel}`}</span>
+				<span className="bg-gray-700/50 px-2 py-0.5 rounded">{`50% by ${edge.massTimeLabel}`}</span>
 				<span className="bg-gray-700/50 px-2 py-0.5 rounded">{`strength: ${strengthPercent}%`}</span>
 			</div>
 		</div>

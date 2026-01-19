@@ -27,10 +27,10 @@ export function computeCoverageStats (tracks: Track[]): CoverageStats {
 	const minTs = Math.min(...dates.map(d => d.getTime()))
 	const maxTs = Math.max(...dates.map(d => d.getTime()))
 
-	const getDayKeyLocal = (d: Date): string => d.toISOString().slice(0, 10)
+	const getDayKeyUTC = (d: Date): string => d.toISOString().slice(0, 10)
 
-	const startDayKey = getDayKeyLocal(new Date(minTs))
-	const endDayKey = getDayKeyLocal(new Date(maxTs))
+	const startDayKey = getDayKeyUTC(new Date(minTs))
+	const endDayKey = getDayKeyUTC(new Date(maxTs))
 
 	const startDay = new Date(startDayKey + 'T00:00:00Z')
 	const endDay = new Date(endDayKey + 'T00:00:00Z')
@@ -40,7 +40,7 @@ export function computeCoverageStats (tracks: Track[]): CoverageStats {
 	const dailyCounts: Map<string, number> = new Map()
 	for (const track of validTracks) {
 		const d = new Date(track.date)
-		const key = getDayKeyLocal(d)
+		const key = getDayKeyUTC(d)
 		dailyCounts.set(key, (dailyCounts.get(key) ?? 0) + 1)
 	}
 
@@ -48,7 +48,7 @@ export function computeCoverageStats (tracks: Track[]): CoverageStats {
 	let currentTs = startDay.getTime()
 	while (currentTs <= endDay.getTime()) {
 		const currentDate = new Date(currentTs)
-		const key = getDayKeyLocal(currentDate)
+		const key = getDayKeyUTC(currentDate)
 		dailyCountsArray.push({
 			date: currentDate,
 			dayKey: key,

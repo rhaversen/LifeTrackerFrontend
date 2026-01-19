@@ -1,7 +1,9 @@
 import {
 	createExponentialBasis,
 	findPeakLag,
-	integratedEffect
+	findMassTime,
+	integratedEffect,
+	evaluateInfluenceCurve
 } from './basis'
 import type { FullModelFit } from './fit'
 import { extractInfluenceWeights } from './fit'
@@ -11,9 +13,14 @@ export interface InfluenceEdge {
 	targetType: string
 	peakLagMs: number
 	peakLagLabel: string
+	massTimeMs: number
+	massTimeLabel: string
 	peakEffect: number
 	integratedEffect: number
 	hazardRatioAtPeak: number
+	hazardRatioAt15m: number
+	hazardRatioAt1h: number
+	hazardRatioAt6h: number
 	direction: 'excite' | 'inhibit' | 'neutral'
 	strength: number
 	weights: Float64Array
@@ -41,8 +48,13 @@ export interface ContinuousInsight {
 
 function msToReadableLabel (ms: number): string {
 	const hours = ms / (60 * 60 * 1000)
+	if (hours < 1 / 60) {
+		const seconds = Math.round(ms / 1000)
+		return seconds > 0 ? `${seconds}s` : '<1s'
+	}
 	if (hours < 1) {
-		return `${Math.round(hours * 60)}min`
+		const minutes = Math.round(hours * 60)
+		return minutes > 0 ? `${minutes}min` : '<1min'
 	}
 	if (hours < 24) {
 		return `${hours.toFixed(1)}h`
@@ -70,13 +82,18 @@ export function extractAllInfluenceEdges (fit: FullModelFit, minStrength: number
 			if (totalAbsWeight < minStrength) { continue }
 
 			const { peakLagMs, peakValue } = findPeakLag(weights, taus)
+			const { massTimeMs } = findMassTime(weights, taus, 0.5)
 			const integrated = integratedEffect(weights, taus)
 			const hr = Math.exp(peakValue)
 
+			const effect15m = evaluateInfluenceCurve(weights, taus, 0.25)
+			const effect1h = evaluateInfluenceCurve(weights, taus, 1)
+			const effect6h = evaluateInfluenceCurve(weights, taus, 6)
+
 			let direction: 'excite' | 'inhibit' | 'neutral' = 'neutral'
-			if (peakValue > 0.1) {
+			if (integrated > 0.1) {
 				direction = 'excite'
-			} else if (peakValue < -0.1) {
+			} else if (integrated < -0.1) {
 				direction = 'inhibit'
 			}
 
@@ -87,9 +104,14 @@ export function extractAllInfluenceEdges (fit: FullModelFit, minStrength: number
 				targetType: typeNames[tgt],
 				peakLagMs,
 				peakLagLabel: msToReadableLabel(peakLagMs),
+				massTimeMs,
+				massTimeLabel: msToReadableLabel(massTimeMs),
 				peakEffect: peakValue,
 				integratedEffect: integrated,
 				hazardRatioAtPeak: hr,
+				hazardRatioAt15m: Math.exp(effect15m),
+				hazardRatioAt1h: Math.exp(effect1h),
+				hazardRatioAt6h: Math.exp(effect6h),
 				direction,
 				strength: strengthCompressed,
 				weights
@@ -161,23 +183,23 @@ export function generateContinuousInsights (
 	for (const edge of edges.slice(0, Math.floor(maxInsights * 0.6))) {
 		if (edge.direction === 'neutral') { continue }
 
-		const hrStr = edge.hazardRatioAtPeak.toFixed(2)
+		const hrStr = edge.hazardRatioAt1h.toFixed(2)
 		const dirWord = edge.direction === 'excite' ? 'increases' : 'decreases'
-		const isCoOccurrence = edge.peakLagMs < 30 * 60 * 1000
+		const isCoOccurrence = edge.massTimeMs < 15 * 60 * 1000
 
 		if (isCoOccurrence) {
 			insights.push({
 				id: `co-${id++}`,
 				type: 'co-occurrence',
 				title: `${edge.sourceType} ↔ ${edge.targetType}`,
-				description: `${edge.sourceType} and ${edge.targetType} tend to occur together (HR=${hrStr})`,
-				effectSize: edge.hazardRatioAtPeak,
-				peakLag: edge.peakLagLabel,
+				description: `${edge.sourceType} and ${edge.targetType} tend to occur together (HR@1h=${hrStr})`,
+				effectSize: edge.hazardRatioAt1h,
+				peakLag: edge.massTimeLabel,
 				confidence: Math.min(1, edge.strength),
 				metadata: {
 					sourceType: edge.sourceType,
 					targetType: edge.targetType,
-					peakLagMs: edge.peakLagMs,
+					massTimeMs: edge.massTimeMs,
 					integratedEffect: edge.integratedEffect
 				}
 			})
@@ -186,14 +208,14 @@ export function generateContinuousInsights (
 				id: `inf-${id++}`,
 				type: 'influence',
 				title: `${edge.sourceType} → ${edge.targetType}`,
-				description: `${edge.sourceType} ${dirWord} ${edge.targetType} rate, peaking at ${edge.peakLagLabel} (HR=${hrStr})`,
-				effectSize: edge.hazardRatioAtPeak,
-				peakLag: edge.peakLagLabel,
+				description: `${edge.sourceType} ${dirWord} ${edge.targetType} rate, 50% effect by ${edge.massTimeLabel} (HR@1h=${hrStr})`,
+				effectSize: edge.hazardRatioAt1h,
+				peakLag: edge.massTimeLabel,
 				confidence: Math.min(1, edge.strength),
 				metadata: {
 					sourceType: edge.sourceType,
 					targetType: edge.targetType,
-					peakLagMs: edge.peakLagMs,
+					massTimeMs: edge.massTimeMs,
 					integratedEffect: edge.integratedEffect,
 					direction: edge.direction
 				}

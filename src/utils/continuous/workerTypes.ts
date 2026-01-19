@@ -17,9 +17,14 @@ export interface InfluenceEdgeSerializable {
 	targetType: string
 	peakLagMs: number
 	peakLagLabel: string
+	massTimeMs: number
+	massTimeLabel: string
 	peakEffect: number
 	integratedEffect: number
 	hazardRatioAtPeak: number
+	hazardRatioAt15m: number
+	hazardRatioAt1h: number
+	hazardRatioAt6h: number
 	direction: 'excite' | 'inhibit' | 'neutral'
 	strength: number
 }
