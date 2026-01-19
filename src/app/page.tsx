@@ -110,16 +110,18 @@ export default function Page (): ReactElement {
 							>
 								{'Import'}
 							</button>
-							<button							onClick={() => setActiveTab('export')}
-							className={`px-2 py-2 text-sm sm:text-base font-medium transition-colors border-b-2 whitespace-nowrap ${
-								activeTab === 'export'
-									? 'text-blue-400 border-blue-400'
-									: 'text-gray-400 border-transparent hover:text-gray-200'
-							}`}
-						>
-							{'Export'}
-						</button>
-						<button								onClick={() => setActiveTab('tracks')}
+							<button
+								onClick={() => setActiveTab('export')}
+								className={`px-2 py-2 text-sm sm:text-base font-medium transition-colors border-b-2 whitespace-nowrap ${
+									activeTab === 'export'
+										? 'text-blue-400 border-blue-400'
+										: 'text-gray-400 border-transparent hover:text-gray-200'
+								}`}
+							>
+								{'Export'}
+							</button>
+							<button
+								onClick={() => setActiveTab('tracks')}
 								className={`px-2 py-2 text-sm sm:text-base font-medium transition-colors border-b-2 whitespace-nowrap ${
 									activeTab === 'tracks'
 										? 'text-blue-400 border-blue-400'
