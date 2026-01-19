@@ -3,6 +3,7 @@
 import axios from 'axios'
 import { useEffect, useMemo, useState, type ReactElement } from 'react'
 
+import ActivityCalendar from '@/components/ActivityCalendar'
 import {
 	BoxPlot,
 	CalendarHeatmap,
@@ -39,6 +40,14 @@ export default function VisualizeTab (): ReactElement {
 	const [selectedTrackName, setSelectedTrackName] = useState<string>('')
 	const [loading, setLoading] = useState(true)
 	const [trackNames, setTrackNames] = useState<string[]>([])
+	const [now, setNow] = useState(() => Date.now())
+
+	useEffect(() => {
+		const interval = setInterval(() => {
+			setNow(Date.now())
+		}, 60000)
+		return () => clearInterval(interval)
+	}, [])
 
 	// Fetch only track names initially
 	useEffect(() => {
@@ -49,10 +58,10 @@ export default function VisualizeTab (): ReactElement {
 					withCredentials: true
 				})
 				const allNames = [...new Set(fullResponse.data.map(t => t.trackName))].sort()
-				setTrackNames(allNames)
+				setTrackNames(['All', ...allNames])
 
 				if (allNames.length > 0 && !selectedTrackName) {
-					setSelectedTrackName(allNames[0])
+					setSelectedTrackName('All')
 				}
 			} catch (error) {
 				console.error('Failed to fetch track names:', error)
@@ -72,7 +81,7 @@ export default function VisualizeTab (): ReactElement {
 				const response = await axios.get<Track[]>(`${API_URL}/v1/tracks`, {
 					withCredentials: true,
 					params: {
-						trackName: selectedTrackName,
+						trackName: selectedTrackName === 'All' ? undefined : selectedTrackName,
 						sort: '-date'
 					}
 				})
@@ -88,7 +97,7 @@ export default function VisualizeTab (): ReactElement {
 	}, [selectedTrackName])
 
 	const filteredTracks = useMemo(() =>
-		tracks.filter(t => t.trackName === selectedTrackName),
+		selectedTrackName === 'All' ? tracks : tracks.filter(t => t.trackName === selectedTrackName),
 	[tracks, selectedTrackName])
 
 	const processedTracks = useProcessedTracks(filteredTracks)
@@ -164,12 +173,18 @@ export default function VisualizeTab (): ReactElement {
 						<span className="text-sm text-gray-500">{`Last track: ${lastTrackText}`}</span>
 					)}
 				</div>
-				<CalendarHeatmap
-					title="Activity Calendar"
-					data={calendarHeatmapData.data}
-					yearRange={calendarHeatmapData.yearRange}
-					dateRange={calendarHeatmapData.dateRange}
-				/>
+				{selectedTrackName === 'All' ? (
+					<div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+						<ActivityCalendar tracks={tracks} />
+					</div>
+				) : (
+					<CalendarHeatmap
+						title="Activity Calendar"
+						data={calendarHeatmapData.data}
+						yearRange={calendarHeatmapData.yearRange}
+						dateRange={calendarHeatmapData.dateRange}
+					/>
+				)}
 			</section>
 
 			<section>
