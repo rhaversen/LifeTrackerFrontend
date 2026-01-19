@@ -6,6 +6,7 @@ import {
 	BarElement,
 	CategoryScale,
 	Chart as ChartJS,
+	type ChartType,
 	Filler,
 	Legend,
 	LinearScale,
@@ -25,6 +26,44 @@ import 'chartjs-adapter-date-fns'
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 
 import type { BoxPlotStats } from '@/hooks/useTrackData'
+import type { CoverageStats } from '@/types/Insights'
+
+declare module 'chart.js' {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	interface PluginOptionsByType<TType extends ChartType> {
+		gapBackground?: {
+			coverage?: CoverageStats
+		}
+	}
+}
+
+const gapBackgroundPlugin = {
+	id: 'gapBackground',
+	beforeDraw: (chart: ChartJS, _args: unknown, options: { coverage?: CoverageStats }) => {
+		if (!options.coverage?.periods) { return }
+
+		const { ctx, chartArea, scales } = chart
+		if (chartArea == null || scales.x == null) { return }
+
+		const { left, right, top, bottom } = chartArea
+		const gapPeriods = options.coverage.periods.filter(p => p.isGap)
+
+		ctx.save()
+		gapPeriods.forEach(gap => {
+			const xStart = scales.x.getPixelForValue(gap.startDate.getTime())
+			const xEnd = scales.x.getPixelForValue(gap.endDate.getTime())
+
+			if (xEnd < left || xStart > right) { return }
+
+			const clampedStart = Math.max(left, xStart)
+			const clampedEnd = Math.min(right, xEnd)
+
+			ctx.fillStyle = 'rgba(30, 58, 138, 0.4)'
+			ctx.fillRect(clampedStart, top, clampedEnd - clampedStart, bottom - top)
+		})
+		ctx.restore()
+	}
+}
 
 ChartJS.register(
 	ArcElement,
@@ -44,7 +83,8 @@ ChartJS.register(
 	Filler,
 	Title,
 	Tooltip,
-	Legend
+	Legend,
+	gapBackgroundPlugin
 )
 
 interface BaseChartProps {
@@ -53,13 +93,14 @@ interface BaseChartProps {
 }
 
 interface LineScatterChartProps extends BaseChartProps {
-	lineData: { x: Date, y: number }[]
-	scatterData: { x: Date, y: number }[]
+	lineData: { x: Date, y: number | null }[]
+	scatterData: { x: Date, y: number | null }[]
 	lineLabel: string
 	scatterLabel: string
 	yAxisLabel: string
 	logScale?: boolean
 	useSingleAxis?: boolean
+	coverage?: CoverageStats
 }
 
 export function LineScatterChart ({
@@ -71,6 +112,7 @@ export function LineScatterChart ({
 	yAxisLabel,
 	logScale = false,
 	useSingleAxis = false,
+	coverage,
 	className = ''
 }: LineScatterChartProps): ReactElement {
 	const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -91,7 +133,7 @@ export function LineScatterChart ({
 		}
 
 		const lineDataTimestamp = lineData.map(d => ({ x: d.x.getTime(), y: d.y }))
-		const scatterDataTimestamp = scatterData.map(d => ({ x: d.x.getTime(), y: d.y }))
+		const scatterDataTimestamp = scatterData.filter(d => d.y !== null).map(d => ({ x: d.x.getTime(), y: d.y as number }))
 
 		chartRef.current = new ChartJS(ctx, {
 			type: 'scatter',
@@ -106,6 +148,7 @@ export function LineScatterChart ({
 						fill: true,
 						tension: 0.1,
 						pointRadius: 0,
+						spanGaps: false,
 						yAxisID: useSingleAxis ? 'yLeft' : 'yRight'
 					},
 					{
@@ -123,7 +166,8 @@ export function LineScatterChart ({
 				maintainAspectRatio: false,
 				plugins: {
 					title: { display: true, text: title, color: '#e5e7eb' },
-					legend: { labels: { color: '#e5e7eb' } }
+					legend: { labels: { color: '#e5e7eb' } },
+					gapBackground: { coverage }
 				},
 				scales: {
 					x: {
@@ -155,7 +199,7 @@ export function LineScatterChart ({
 		return () => {
 			chartRef.current?.destroy()
 		}
-	}, [lineData, scatterData, lineLabel, scatterLabel, yAxisLabel, logScale, useSingleAxis, title])
+	}, [lineData, scatterData, lineLabel, scatterLabel, yAxisLabel, logScale, useSingleAxis, coverage, title])
 
 	return (
 		<div className={`bg-gray-800 rounded-lg p-4 ${className}`}>
@@ -166,9 +210,10 @@ export function LineScatterChart ({
 
 interface TimeOfDayScatterProps extends BaseChartProps {
 	data: { x: Date, y: number }[]
+	coverage?: CoverageStats
 }
 
-export function TimeOfDayScatter ({ title, data, className = '' }: TimeOfDayScatterProps): ReactElement {
+export function TimeOfDayScatter ({ title, data, coverage, className = '' }: TimeOfDayScatterProps): ReactElement {
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const chartRef = useRef<ChartJS | null>(null)
 
@@ -203,7 +248,8 @@ export function TimeOfDayScatter ({ title, data, className = '' }: TimeOfDayScat
 				maintainAspectRatio: false,
 				plugins: {
 					title: { display: true, text: title, color: '#e5e7eb' },
-					legend: { labels: { color: '#e5e7eb' } }
+					legend: { labels: { color: '#e5e7eb' } },
+					gapBackground: { coverage }
 				},
 				scales: {
 					x: {
@@ -230,7 +276,7 @@ export function TimeOfDayScatter ({ title, data, className = '' }: TimeOfDayScat
 		return () => {
 			chartRef.current?.destroy()
 		}
-	}, [data, title])
+	}, [data, coverage, title])
 
 	return (
 		<div className={`bg-gray-800 rounded-lg p-4 ${className}`}>

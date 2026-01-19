@@ -32,6 +32,7 @@ import {
 	useWeekdayScatterData
 } from '@/hooks/useTrackData'
 import type { Track } from '@/types/Track'
+import { computeCoverageStats } from '@/utils/continuous/coverageAnalysis'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -100,11 +101,12 @@ export default function VisualizeTab (): ReactElement {
 		selectedTrackName === 'All' ? tracks : tracks.filter(t => t.trackName === selectedTrackName),
 	[tracks, selectedTrackName])
 
-	const processedTracks = useProcessedTracks(filteredTracks)
-	const cumulativeData = useCumulativeData(processedTracks)
+	const coverage = useMemo(() => computeCoverageStats(filteredTracks), [filteredTracks])
+	const processedTracks = useProcessedTracks(filteredTracks, coverage)
+	const cumulativeData = useCumulativeData(processedTracks, coverage)
 	const deltaDaysData = useDeltaDaysData(processedTracks)
-	const frequencyData = useFrequencyData(processedTracks)
-	const timeOfDayData = useTimeOfDayData(processedTracks)
+	const frequencyData = useFrequencyData(processedTracks, coverage)
+	const timeOfDayData = useTimeOfDayData(processedTracks, coverage)
 	const hourlyDistribution = useHourlyDistribution(processedTracks)
 	const weekdayScatterData = useWeekdayScatterData(processedTracks)
 	const weekdayDistribution = useWeekdayDistribution(processedTracks)
@@ -198,6 +200,7 @@ export default function VisualizeTab (): ReactElement {
 							scatterLabel="Delta Days"
 							yAxisLabel="Count / Days"
 							logScale={true}
+							coverage={coverage}
 							className="h-80"
 						/>
 					</section>
@@ -212,6 +215,7 @@ export default function VisualizeTab (): ReactElement {
 							scatterLabel="Weekly Avg"
 							yAxisLabel="Tracks per Day"
 							useSingleAxis={true}
+							coverage={coverage}
 							className="h-80"
 						/>
 					</section>
@@ -222,7 +226,7 @@ export default function VisualizeTab (): ReactElement {
 							<TimeOfDayScatter
 								title="Time of Day by Date"
 								data={timeOfDayData}
-								className="h-80"
+								coverage={coverage}
 							/>
 							<PolarChart
 								title="Hourly Distribution"
