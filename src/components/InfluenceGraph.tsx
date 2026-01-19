@@ -241,46 +241,46 @@ export default function InfluenceGraph ({ edges, typeNames }: InfluenceGraphProp
 						id="arrowhead-excite"
 						markerWidth="12"
 						markerHeight="12"
-					refX="0"
-					refY="6"
-					orient="auto"
-					markerUnits="userSpaceOnUse"
-				>
-					<polygon points="0 0, 12 6, 0 12" fill="#ef4444" />
-				</marker>
-				<marker
-					id="arrowhead-inhibit"
-					markerWidth="12"
-					markerHeight="12"
-					refX="0"
-					refY="6"
-					orient="auto"
-					markerUnits="userSpaceOnUse"
-				>
-					<polygon points="0 0, 12 6, 0 12" fill="#3b82f6" />
-				</marker>
-				<marker
-					id="arrowhead-neutral"
-					markerWidth="12"
-					markerHeight="12"
-					refX="0"
-					refY="6"
-					orient="auto"
-					markerUnits="userSpaceOnUse"
-				>
-					<polygon points="0 0, 12 6, 0 12" fill="#6b7280" />
-				</marker>
-			</defs>
+						refX="0"
+						refY="6"
+						orient="auto"
+						markerUnits="userSpaceOnUse"
+					>
+						<polygon points="0 0, 12 6, 0 12" fill="#ef4444" />
+					</marker>
+					<marker
+						id="arrowhead-inhibit"
+						markerWidth="12"
+						markerHeight="12"
+						refX="0"
+						refY="6"
+						orient="auto"
+						markerUnits="userSpaceOnUse"
+					>
+						<polygon points="0 0, 12 6, 0 12" fill="#3b82f6" />
+					</marker>
+					<marker
+						id="arrowhead-neutral"
+						markerWidth="12"
+						markerHeight="12"
+						refX="0"
+						refY="6"
+						orient="auto"
+						markerUnits="userSpaceOnUse"
+					>
+						<polygon points="0 0, 12 6, 0 12" fill="#6b7280" />
+					</marker>
+				</defs>
 
-		{graphEdges.map((edge, idx) => {
-			const highlighted = isEdgeHighlighted(edge)
-			const baseOpacity = 0.01 + Math.pow(edge.strength, 3) * 0.99
-			const opacity = hoveredNode !== null || hoveredEdge !== null
-				? (highlighted ? 1 : 0.005)
-				: baseOpacity
-			const strokeWidth = highlighted ? 10 : 0.2 + Math.pow(edge.strength, 3) * 10
+				{graphEdges.map((edge, idx) => {
+					const highlighted = isEdgeHighlighted(edge)
+					const baseOpacity = 0.01 + Math.pow(edge.strength, 3) * 0.99
+					const opacity = hoveredNode !== null || hoveredEdge !== null
+						? (highlighted ? 1 : 0.005)
+						: baseOpacity
+					const strokeWidth = highlighted ? 10 : 0.2 + Math.pow(edge.strength, 3) * 10
 
-			const handleMouseMove = (e: React.MouseEvent): void => {
+					const handleMouseMove = (e: React.MouseEvent): void => {
 						const rect = containerRef.current?.getBoundingClientRect()
 						if (rect !== undefined) {
 							setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
