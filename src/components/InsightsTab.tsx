@@ -76,8 +76,14 @@ export default function InsightsTab (): ReactElement {
 
 	if (loading) {
 		return (
-			<div className="flex items-center justify-center py-20">
-				<div className="text-gray-300 text-xl">{'Loading tracks...'}</div>
+			<div className="space-y-6">
+				<h2 className="text-2xl font-bold text-gray-200">{'Insights'}</h2>
+				<div className="flex items-center justify-center py-20">
+					<div className="flex items-center gap-2">
+						<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+						<span className="text-gray-300 text-lg">{'Loading tracks...'}</span>
+					</div>
+				</div>
 			</div>
 		)
 	}

@@ -130,14 +130,6 @@ export default function VisualizeTab (): ReactElement {
 		return `${minutesSince}m ago`
 	}, [tracks, now])
 
-	if (loading) {
-		return (
-			<div className="flex items-center justify-center py-20">
-				<div className="text-gray-300 text-xl">{'Loading...'}</div>
-			</div>
-		)
-	}
-
 	return (
 		<div className="space-y-6">
 			<div className="sticky top-[117px] sm:top-[73px] z-10 bg-gray-900 pt-4 pb-4 border-b border-gray-800 -mx-4 sm:-mx-6">
@@ -166,6 +158,15 @@ export default function VisualizeTab (): ReactElement {
 				</div>
 			</div>
 
+			{loading ? (
+				<div className="flex items-center justify-center py-20">
+					<div className="flex items-center gap-2">
+						<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+						<span className="text-gray-300 text-lg">{'Loading...'}</span>
+					</div>
+				</div>
+			) : (
+				<>
 			<section>
 				<div className="flex items-center justify-between mb-4">
 					<h2 className="text-xl font-semibold text-gray-200">{'Activity Calendar'}</h2>
@@ -294,6 +295,8 @@ export default function VisualizeTab (): ReactElement {
 					/>
 				</div>
 			</section>
+			</>
+			)}
 		</div>
 	)
 }

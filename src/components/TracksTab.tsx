@@ -112,14 +112,6 @@ export default function TracksTab (): ReactElement {
 		}
 	}
 
-	if (loading) {
-		return (
-			<div className="flex items-center justify-center py-20">
-				<div className="text-gray-300 text-xl">{'Loading...'}</div>
-			</div>
-		)
-	}
-
 	return (
 		<div className="space-y-6">
 			<div className="flex flex-col gap-4">
@@ -277,55 +269,66 @@ export default function TracksTab (): ReactElement {
 						</tr>
 					</thead>
 					<tbody className="divide-y divide-gray-700">
-						{displayTracks.map((track, index) => {
-							const date = new Date(track.date)
-							const isInvalid = isNaN(date.getTime())
-							return (
-								<tr key={track._id ?? index} className={`hover:bg-gray-750 ${isInvalid ? 'bg-red-900/10' : ''}`}>
-									<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">
-										{track.trackName}
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-										{isInvalid ? (
-											<span className="text-red-400 font-mono">{String(track.date)}</span>
-										) : (
-											date.toLocaleDateString('en-GB', {
-												day: '2-digit',
-												month: 'short',
-												year: 'numeric'
-											})
-										)}
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-										{isInvalid ? (
-											<span className="text-red-400">{'Invalid Date'}</span>
-										) : (
-											date.toLocaleTimeString('en-GB', {
-												hour: '2-digit',
-												minute: '2-digit',
-												second: '2-digit'
-											})
-										)}
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-										<button
-											onClick={() => handleDelete(track._id!)}
-											className="text-red-400 hover:text-red-300 font-medium transition-colors"
-										>
-											{'Delete'}
-										</button>
-									</td>
-								</tr>
-							)
-						})}
+						{loading ? (
+							<tr>
+								<td colSpan={4} className="px-6 py-12 text-center">
+									<div className="flex items-center justify-center gap-2">
+										<div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+										<span className="text-gray-400">{'Loading...'}</span>
+									</div>
+								</td>
+							</tr>
+						) : displayTracks.length === 0 ? (
+							<tr>
+								<td colSpan={4} className="px-6 py-12 text-center text-gray-400">
+									{showProblematic ? 'No problematic tracks found' : 'No tracks found'}
+								</td>
+							</tr>
+						) : (
+							displayTracks.map((track, index) => {
+								const date = new Date(track.date)
+								const isInvalid = isNaN(date.getTime())
+								return (
+									<tr key={track._id ?? index} className={`hover:bg-gray-750 ${isInvalid ? 'bg-red-900/10' : ''}`}>
+										<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">
+											{track.trackName}
+										</td>
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+											{isInvalid ? (
+												<span className="text-red-400 font-mono">{String(track.date)}</span>
+											) : (
+												date.toLocaleDateString('en-GB', {
+													day: '2-digit',
+													month: 'short',
+													year: 'numeric'
+												})
+											)}
+										</td>
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+											{isInvalid ? (
+												<span className="text-red-400">{'Invalid Date'}</span>
+											) : (
+												date.toLocaleTimeString('en-GB', {
+													hour: '2-digit',
+													minute: '2-digit',
+													second: '2-digit'
+												})
+											)}
+										</td>
+										<td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+											<button
+												onClick={() => handleDelete(track._id!)}
+												className="text-red-400 hover:text-red-300 font-medium transition-colors"
+											>
+												{'Delete'}
+											</button>
+										</td>
+									</tr>
+								)
+							}))
+						}
 					</tbody>
 				</table>
-
-				{displayTracks.length === 0 && (
-					<div className="px-6 py-12 text-center text-gray-400">
-						{showProblematic ? 'No problematic tracks found' : 'No tracks found'}
-					</div>
-				)}
 			</div>
 
 			{/* Bottom Pagination Controls */}
