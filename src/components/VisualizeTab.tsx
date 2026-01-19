@@ -106,6 +106,21 @@ export default function VisualizeTab (): ReactElement {
 	const weekdayBoxPlotData = useWeekdayBoxPlotData(processedTracks)
 	const monthlyBoxPlotData = useMonthlyBoxPlotData(processedTracks)
 
+	const lastTrackText = useMemo(() => {
+		const validTracks = tracks.filter(t => !isNaN(new Date(t.date).getTime()))
+		if (validTracks.length === 0) { return null }
+
+		const lastTrackDate = new Date(Math.max(...validTracks.map(t => new Date(t.date).getTime())))
+		const timeSinceLastMs = now - lastTrackDate.getTime()
+		const daysSince = Math.floor(timeSinceLastMs / (1000 * 60 * 60 * 24))
+		const hoursSince = Math.floor((timeSinceLastMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+		const minutesSince = Math.floor((timeSinceLastMs % (1000 * 60 * 60)) / (1000 * 60))
+
+		if (daysSince > 0) { return `${daysSince}d ${hoursSince}h ago` }
+		if (hoursSince > 0) { return `${hoursSince}h ${minutesSince}m ago` }
+		return `${minutesSince}m ago`
+	}, [tracks, now])
+
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center py-20">
@@ -143,7 +158,12 @@ export default function VisualizeTab (): ReactElement {
 			</div>
 
 			<section>
-				<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Activity Calendar'}</h2>
+				<div className="flex items-center justify-between mb-4">
+					<h2 className="text-xl font-semibold text-gray-200">{'Activity Calendar'}</h2>
+					{lastTrackText != null && (
+						<span className="text-sm text-gray-500">{`Last track: ${lastTrackText}`}</span>
+					)}
+				</div>
 				<CalendarHeatmap
 					title="Activity Calendar"
 					data={calendarHeatmapData.data}
