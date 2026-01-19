@@ -7,6 +7,7 @@ import { useInsightsWorker } from '../hooks/useInsightsWorker'
 import type { Track } from '../types/Track'
 
 import ActivityCalendar from './ActivityCalendar'
+import InfluenceGraph from './InfluenceGraph'
 import { CoverageCard, InfluenceEdgeCard, BaselineRhythmCard } from './InsightCards'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'
@@ -154,6 +155,20 @@ export default function InsightsTab (): ReactElement {
 			</div>
 
 			<CoverageCard coverage={continuousResult.coverage} />
+
+			{influenceEdges.length > 0 && (
+				<div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+					<div className="flex items-center gap-2 mb-3">
+						<span className="text-lg">{'🔗'}</span>
+						<span className="text-sm font-medium text-gray-300">{'Influence Network'}</span>
+						<span className="text-xs text-gray-500">{`${continuousResult.baselines.length} types • ${influenceEdges.length} edges`}</span>
+					</div>
+					<InfluenceGraph
+						edges={influenceEdges}
+						typeNames={continuousResult.baselines.map(b => b.typeName)}
+					/>
+				</div>
+			)}
 
 			{excitingEdges.length > 0 && (
 				<div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
