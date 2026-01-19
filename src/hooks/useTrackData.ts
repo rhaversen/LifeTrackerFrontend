@@ -185,11 +185,26 @@ export function useDeltaByTimeData (tracks: ProcessedTrack[]): { x: number, y: n
 export function useCalendarHeatmapData (tracks: ProcessedTrack[]): {
 	data: Map<string, number>
 	yearRange: { start: number, end: number }
+	dateRange: { start: Date, end: Date }
 } {
 	return useMemo(() => {
 		const data = new Map<string, number>()
-		let minYear = new Date().getFullYear()
-		let maxYear = minYear
+		const today = new Date()
+		today.setHours(0, 0, 0, 0)
+		const currentYear = today.getFullYear()
+
+		if (tracks.length === 0) {
+			return {
+				data,
+				yearRange: { start: currentYear, end: currentYear },
+				dateRange: { start: today, end: today }
+			}
+		}
+
+		let minDate = new Date(tracks[0].dateObj)
+		let maxDate = new Date(tracks[0].dateObj)
+		let minYear = minDate.getFullYear()
+		let maxYear = maxDate.getFullYear()
 
 		tracks.forEach(t => {
 			const dateKey = t.dateObj.toISOString().split('T')[0]
@@ -197,11 +212,21 @@ export function useCalendarHeatmapData (tracks: ProcessedTrack[]): {
 			const year = t.dateObj.getFullYear()
 			minYear = Math.min(minYear, year)
 			maxYear = Math.max(maxYear, year)
+
+			const trackDate = new Date(t.dateObj)
+			trackDate.setHours(0, 0, 0, 0)
+			if (trackDate < minDate) { minDate = trackDate }
+			if (trackDate > maxDate) { maxDate = trackDate }
 		})
+
+		// Cap maxDate and maxYear at today (don't show future)
+		if (maxDate > today) { maxDate = today }
+		maxYear = Math.min(maxYear, currentYear)
 
 		return {
 			data,
-			yearRange: { start: minYear, end: maxYear }
+			yearRange: { start: minYear, end: maxYear },
+			dateRange: { start: minDate, end: maxDate }
 		}
 	}, [tracks])
 }
