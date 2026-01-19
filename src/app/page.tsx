@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState, type ReactElement } from 'react'
 
 import IngressTab from '@/components/IngressTab'
+import InsightsTab from '@/components/InsightsTab'
 import TracksTab from '@/components/TracksTab'
 import VisualizeTab from '@/components/VisualizeTab'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-type Tab = 'visualize' | 'ingress' | 'tracks'
+type Tab = 'visualize' | 'insights' | 'ingress' | 'tracks'
 
 export default function Page (): ReactElement {
 	const router = useRouter()
@@ -90,8 +91,16 @@ export default function Page (): ReactElement {
 							>
 								{'Visualize'}
 							</button>
-							<button
-								onClick={() => setActiveTab('ingress')}
+							<button							onClick={() => setActiveTab('insights')}
+								className={`px-2 py-2 text-sm sm:text-base font-medium transition-colors border-b-2 whitespace-nowrap ${
+									activeTab === 'insights'
+										? 'text-blue-400 border-blue-400'
+										: 'text-gray-400 border-transparent hover:text-gray-200'
+								}`}
+							>
+								{'Insights'}
+							</button>
+							<button								onClick={() => setActiveTab('ingress')}
 								className={`px-2 py-2 text-sm sm:text-base font-medium transition-colors border-b-2 whitespace-nowrap ${
 									activeTab === 'ingress'
 										? 'text-blue-400 border-blue-400'
@@ -119,6 +128,7 @@ export default function Page (): ReactElement {
 				{isAuthenticated ? (
 					<>
 						{activeTab === 'visualize' && <VisualizeTab />}
+						{activeTab === 'insights' && <InsightsTab />}
 						{activeTab === 'ingress' && <IngressTab />}
 						{activeTab === 'tracks' && <TracksTab />}
 					</>

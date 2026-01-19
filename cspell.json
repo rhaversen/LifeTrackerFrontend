@@ -22,6 +22,8 @@
     "ignoreWords": [
         "chunkname",
         "tailwindcss",
-        "chartjs"
+        "chartjs",
+        "PPGLM",
+        "ppglm"
     ]
 }
