@@ -148,6 +148,7 @@ export default function VisualizeTab (): ReactElement {
 					title="Activity Calendar"
 					data={calendarHeatmapData.data}
 					yearRange={calendarHeatmapData.yearRange}
+					dateRange={calendarHeatmapData.dateRange}
 				/>
 			</section>
 

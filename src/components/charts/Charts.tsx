@@ -536,9 +536,10 @@ export function DeltaByTimeScatter ({ title, data, logScale = false, className =
 interface CalendarHeatmapProps extends BaseChartProps {
 	data: Map<string, number>
 	yearRange: { start: number, end: number }
+	dateRange?: { start: Date, end: Date }
 }
 
-export function CalendarHeatmap ({ title, data, yearRange, className = '' }: CalendarHeatmapProps): ReactElement {
+export function CalendarHeatmap ({ title, data, yearRange, dateRange, className = '' }: CalendarHeatmapProps): ReactElement {
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const containerRef = useRef<HTMLDivElement>(null)
 	const [tooltip, setTooltip] = useState<{ x: number, y: number, date: string, count: number } | null>(null)
@@ -555,8 +556,8 @@ export function CalendarHeatmap ({ title, data, yearRange, className = '' }: Cal
 		const labelWidth = 20
 		const paddingRight = 10
 
-		const startDate = new Date(yearRange.start, 0, 1)
-		const endDate = new Date(yearRange.end, 11, 31)
+		const startDate = dateRange ? new Date(dateRange.start) : new Date(yearRange.start, 0, 1)
+		const endDate = dateRange ? new Date(dateRange.end) : new Date(yearRange.end, 11, 31)
 		const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
 		const totalWeeks = Math.ceil(totalDays / 7) + 1
 
