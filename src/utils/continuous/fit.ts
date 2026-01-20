@@ -166,7 +166,8 @@ export async function fitFullModel (
 	windows: ObservationWindow[],
 	numBases: number = 6,
 	options: Partial<FitOptions> = {},
-	onProgress?: ProgressCallback
+	onProgress?: ProgressCallback,
+	translations?: Record<string, string>
 ): Promise<FullModelFit> {
 	const numTypes = stream.typeNames.length
 	const countsByType = computeCountsByType(stream, numTypes)
@@ -184,8 +185,9 @@ export async function fitFullModel (
 	for (let i = 0; i < eligibleTypes.length; i++) {
 		const k = eligibleTypes[i]
 		const typeName = stream.typeNames[k]
+		const translatedName = translations?.[typeName] ?? typeName
 		const percent = Math.round((i / eligibleTypes.length) * 100)
-		onProgress?.('Fitting model', percent, `Fitting ${typeName} (${i + 1}/${eligibleTypes.length})`)
+		onProgress?.('Fitting model', percent, `Fitting ${translatedName} (${i + 1}/${eligibleTypes.length})`)
 
 		await new Promise(resolve => setTimeout(resolve, 0))
 

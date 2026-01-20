@@ -32,6 +32,7 @@ import {
 	useWeekdayScatterData
 } from '@/hooks/useTrackData'
 import type { Track } from '@/types/Track'
+import type { User } from '@/types/User'
 import { computeCoverageStats } from '@/utils/continuous/coverageAnalysis'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -42,6 +43,11 @@ export default function VisualizeTab (): ReactElement {
 	const [loading, setLoading] = useState(true)
 	const [trackNames, setTrackNames] = useState<string[]>([])
 	const [now, setNow] = useState(() => Date.now())
+	const [translations, setTranslations] = useState<Record<string, string>>({})
+
+	const getTranslatedName = (trackName: string): string => {
+		return translations[trackName] ?? trackName
+	}
 
 	useEffect(() => {
 		const interval = setInterval(() => {
@@ -69,7 +75,19 @@ export default function VisualizeTab (): ReactElement {
 			}
 		}
 
+		const fetchUser = async (): Promise<void> => {
+			try {
+				const response = await axios.get<User>(`${API_URL}/v1/users/user`, {
+					withCredentials: true
+				})
+				setTranslations(response.data.trackNameTranslations ?? {})
+			} catch (error) {
+				console.error('Failed to fetch user:', error)
+			}
+		}
+
 		fetchTrackNames().catch(console.error)
+		fetchUser().catch(console.error)
 	}, [selectedTrackName])
 
 	// Fetch tracks for selected track name only
@@ -153,7 +171,7 @@ export default function VisualizeTab (): ReactElement {
 										: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
 								}`}
 							>
-								{name}
+								{name === 'All' ? name : getTranslatedName(name)}
 							</button>
 						))}
 					</div>
@@ -178,7 +196,7 @@ export default function VisualizeTab (): ReactElement {
 						</div>
 						{selectedTrackName === 'All' ? (
 							<div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-								<ActivityCalendar tracks={tracks} />
+								<ActivityCalendar tracks={tracks} getTranslatedName={getTranslatedName} />
 							</div>
 						) : (
 							<CalendarHeatmap

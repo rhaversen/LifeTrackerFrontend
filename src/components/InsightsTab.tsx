@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, type ReactElement } from 'react'
 
 import { useInsightsWorker } from '../hooks/useInsightsWorker'
 import type { Track } from '../types/Track'
+import type { User } from '../types/User'
 
 import ActivityCalendar from './ActivityCalendar'
 import InfluenceGraph from './InfluenceGraph'
@@ -41,8 +42,13 @@ function ProgressBar ({ percent, stage, detail }: ProgressBarProps): ReactElemen
 export default function InsightsTab (): ReactElement {
 	const [tracks, setTracks] = useState<Track[]>([])
 	const [loading, setLoading] = useState(true)
+	const [translations, setTranslations] = useState<Record<string, string>>({})
 
 	const { result: continuousResult, analyzing, progress, error, analyze, cancel } = useInsightsWorker()
+
+	const getTranslatedName = (trackName: string): string => {
+		return translations[trackName] ?? trackName
+	}
 
 	const fetchTracks = useCallback(async (): Promise<void> => {
 		setLoading(true)
@@ -60,6 +66,19 @@ export default function InsightsTab (): ReactElement {
 
 	useEffect(() => {
 		fetchTracks().catch(console.error)
+
+		const fetchUser = async (): Promise<void> => {
+			try {
+				const response = await axios.get<User>(`${API_URL}/v1/users/user`, {
+					withCredentials: true
+				})
+				setTranslations(response.data.trackNameTranslations ?? {})
+			} catch (error) {
+				console.error('Failed to fetch user:', error)
+			}
+		}
+
+		fetchUser().catch(console.error)
 	}, [fetchTracks])
 
 	useEffect(() => {
@@ -67,12 +86,12 @@ export default function InsightsTab (): ReactElement {
 			return
 		}
 
-		analyze(tracks)
+		analyze(tracks, { translations })
 
 		return () => {
 			cancel()
 		}
-	}, [tracks, analyze, cancel])
+	}, [tracks, analyze, cancel, translations])
 
 	if (loading) {
 		return (
@@ -157,9 +176,8 @@ export default function InsightsTab (): ReactElement {
 			<h2 className="text-2xl font-bold text-gray-200">{'Insights'}</h2>
 
 			<div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-				<ActivityCalendar tracks={tracks} coverage={continuousResult.coverage} />
+				<ActivityCalendar tracks={tracks} coverage={continuousResult.coverage} getTranslatedName={getTranslatedName} />
 			</div>
-
 			<CoverageCard coverage={continuousResult.coverage} />
 
 			{influenceEdges.length > 0 && (
@@ -172,6 +190,7 @@ export default function InsightsTab (): ReactElement {
 					<InfluenceGraph
 						edges={influenceEdges}
 						typeNames={continuousResult.baselines.map(b => b.typeName)}
+						getTranslatedName={getTranslatedName}
 					/>
 				</div>
 			)}
@@ -185,7 +204,7 @@ export default function InsightsTab (): ReactElement {
 					</div>
 					<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
 						{excitingEdges.slice(0, 9).map((edge, idx) => (
-							<InfluenceEdgeCard key={`exc-${idx}`} edge={edge} />
+							<InfluenceEdgeCard key={`exc-${idx}`} edge={edge} getTranslatedName={getTranslatedName} />
 						))}
 					</div>
 				</div>
@@ -200,7 +219,7 @@ export default function InsightsTab (): ReactElement {
 					</div>
 					<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
 						{inhibitingEdges.slice(0, 9).map((edge, idx) => (
-							<InfluenceEdgeCard key={`inh-${idx}`} edge={edge} />
+							<InfluenceEdgeCard key={`inh-${idx}`} edge={edge} getTranslatedName={getTranslatedName} />
 						))}
 					</div>
 				</div>
@@ -215,7 +234,7 @@ export default function InsightsTab (): ReactElement {
 					</div>
 					<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
 						{rhythmicBaselines.map((baseline, idx) => (
-							<BaselineRhythmCard key={`rhythm-${idx}`} baseline={baseline} />
+							<BaselineRhythmCard key={`rhythm-${idx}`} baseline={baseline} getTranslatedName={getTranslatedName} />
 						))}
 					</div>
 				</div>

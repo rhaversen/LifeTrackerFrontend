@@ -96,7 +96,7 @@ export async function computeContinuousInsights (
 		learningRate,
 		lambda1,
 		lambda2
-	}, fitProgress)
+	}, fitProgress, options.translations)
 
 	onProgress?.('Extracting insights', 90, 'Analyzing influence patterns')
 

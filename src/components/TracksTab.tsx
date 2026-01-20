@@ -4,6 +4,7 @@ import axios from 'axios'
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
 
 import type { Track } from '@/types/Track'
+import type { User } from '@/types/User'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -18,10 +19,13 @@ export default function TracksTab (): ReactElement {
 	const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 	const [trackNames, setTrackNames] = useState<string[]>([])
 	const [selectedTrackName, setSelectedTrackName] = useState<string>('All')
-	const [showRenameModal, setShowRenameModal] = useState(false)
-	const [renameOldName, setRenameOldName] = useState('')
-	const [renameNewName, setRenameNewName] = useState('')
-	const [renaming, setRenaming] = useState(false)
+	const [translations, setTranslations] = useState<Record<string, string>>({})
+	const [editingTranslation, setEditingTranslation] = useState<string | null>(null)
+	const [savingTranslations, setSavingTranslations] = useState(false)
+	const [editingTrackName, setEditingTrackName] = useState<Record<string, string>>({})
+	const [renamingTrackName, setRenamingTrackName] = useState(false)
+	const [lockedTrackNames, setLockedTrackNames] = useState<Record<string, boolean>>({})
+	const [trackManagementExpanded, setTrackManagementExpanded] = useState(false)
 
 	const fetchTracks = useCallback(async (): Promise<void> => {
 		setLoading(true)
@@ -69,9 +73,42 @@ export default function TracksTab (): ReactElement {
 		}
 	}, [])
 
+	const fetchUser = useCallback(async (): Promise<void> => {
+		try {
+			const response = await axios.get<User>(`${API_URL}/v1/users/user`, {
+				withCredentials: true
+			})
+			setTranslations(response.data.trackNameTranslations ?? {})
+		} catch (error) {
+			console.error('Failed to fetch user:', error)
+		}
+	}, [])
+
+	const saveTranslations = useCallback(async (newTranslations: Record<string, string>): Promise<void> => {
+		setSavingTranslations(true)
+		try {
+			await axios.patch(
+				`${API_URL}/v1/users/track-name-translations`,
+				{ translations: newTranslations },
+				{ withCredentials: true }
+			)
+			setTranslations(newTranslations)
+		} catch (error) {
+			console.error('Failed to save translations:', error)
+			alert('Failed to save translations. Please try again.')
+		} finally {
+			setSavingTranslations(false)
+		}
+	}, [])
+
+	const getTranslatedName = useCallback((trackName: string): string => {
+		return translations[trackName] ?? trackName
+	}, [translations])
+
 	useEffect(() => {
 		fetchTrackNames().catch(console.error)
-	}, [fetchTrackNames])
+		fetchUser().catch(console.error)
+	}, [fetchTrackNames, fetchUser])
 
 	useEffect(() => {
 		fetchTracks().catch(console.error)
@@ -100,46 +137,80 @@ export default function TracksTab (): ReactElement {
 		}
 	}, [])
 
-	const handleRename = useCallback(async (): Promise<void> => {
-		const oldName = renameOldName.trim()
-		const newName = renameNewName.trim()
+	const handleInlineRename = useCallback(async (oldName: string, newName: string): Promise<void> => {
+		const trimmedOld = oldName.trim()
+		const trimmedNew = newName.trim()
 
-		if (!oldName || !newName) {
+		if (!trimmedOld || !trimmedNew) {
 			alert('Please fill in both fields.')
 			return
 		}
 
-		if (oldName === newName) {
-			alert('New name must be different from old name.')
-			return
+		if (trimmedOld === trimmedNew) {
+			return // No change
 		}
 
-		setRenaming(true)
+		// Check if new name already exists
+		const existingNames = trackNames.filter(name => name !== 'All')
+		if (existingNames.includes(trimmedNew) && trimmedOld !== trimmedNew) {
+			const confirmed = confirm(
+				`Warning: A track type named "${trimmedNew}" already exists. ` +
+				`Renaming "${trimmedOld}" to "${trimmedNew}" will combine all tracks from both types. ` +
+				'This action cannot be undone and there will be no way to separate them again.\n\n' +
+				'Do you want to continue?'
+			)
+			if (!confirmed) {
+				// Reset the editing state
+				setEditingTrackName(prev => {
+					const newState = { ...prev }
+					delete newState[oldName]
+					return newState
+				})
+				return
+			}
+		}
+
+		setRenamingTrackName(true)
 		try {
 			const response = await axios.patch<{ modifiedCount: number }>(
 				`${API_URL}/v1/tracks/bulk/rename`,
-				{ oldName, newName },
+				{ oldName: trimmedOld, newName: trimmedNew },
 				{ withCredentials: true }
 			)
 
 			alert(`Successfully renamed ${response.data.modifiedCount} track${response.data.modifiedCount !== 1 ? 's' : ''}`)
-			setShowRenameModal(false)
-			setRenameOldName('')
-			setRenameNewName('')
+
+			// Update translations if the old name had a translation
+			if (translations[trimmedOld]) {
+				const newTranslations = { ...translations }
+				newTranslations[trimmedNew] = newTranslations[trimmedOld]
+				delete newTranslations[trimmedOld]
+				await saveTranslations(newTranslations)
+			}
 
 			// Refresh track names and tracks
 			await fetchTrackNames()
 			await fetchTracks()
 
-			// Select the new track name
-			setSelectedTrackName(newName)
+			// Clear editing state
+			setEditingTrackName(prev => {
+				const newState = { ...prev }
+				delete newState[oldName]
+				return newState
+			})
 		} catch (error) {
 			console.error('Failed to rename tracks:', error)
 			alert('Failed to rename tracks. Please try again.')
+			// Reset editing state on error
+			setEditingTrackName(prev => {
+				const newState = { ...prev }
+				delete newState[oldName]
+				return newState
+			})
 		} finally {
-			setRenaming(false)
+			setRenamingTrackName(false)
 		}
-	}, [renameOldName, renameNewName, fetchTrackNames, fetchTracks])
+	}, [trackNames, translations, saveTranslations, fetchTrackNames, fetchTracks])
 
 	const problematicTracks = useMemo(() => tracks.filter(track => isNaN(new Date(track.date).getTime())), [tracks])
 	const validTracks = useMemo(() => tracks.filter(track => !isNaN(new Date(track.date).getTime())), [tracks])
@@ -205,19 +276,161 @@ export default function TracksTab (): ReactElement {
 				</div>
 
 				{!showProblematic && trackNames.length > 1 && (
+					<div className="bg-gray-800 rounded-lg border border-gray-700 mb-4">
+						<button
+							onClick={() => setTrackManagementExpanded(!trackManagementExpanded)}
+							className="w-full flex items-center justify-between p-4 hover:bg-gray-700 transition-colors rounded-lg cursor-pointer"
+						>
+							<h3 className="text-lg font-semibold text-white">{'Track Name Management'}</h3>
+							<span className="text-sm text-blue-400 font-medium">
+								{trackManagementExpanded ? 'Collapse' : 'Expand'}
+							</span>
+						</button>
+						{trackManagementExpanded && (
+							<div className="px-4 pb-4">
+								<p className="text-sm text-gray-400 mb-4">
+									{'Manage your track names and display labels. Changes to internal names will affect all associated tracks.'}
+								</p>
+								<div className="grid grid-cols-2 gap-3 mb-2">
+									<div>
+										<div className="flex items-center gap-2 mb-2">
+											<div className="text-xs font-semibold text-gray-400 uppercase">
+												{'Internal Name (Backend)'}
+											</div>
+											{Object.values(lockedTrackNames).some(locked => locked !== false) && (
+												<button
+													onClick={async () => {
+														const confirmed = confirm('Are you sure you want to unlock all internal names for editing? This will allow you to rename all tracks.')
+														if (confirmed) {
+															const unlocked: Record<string, boolean> = {}
+															trackNames.filter(name => name !== 'All').forEach(name => {
+																unlocked[name] = false
+															})
+															setLockedTrackNames(unlocked)
+														}
+													}}
+													disabled={renamingTrackName}
+													className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-500 disabled:opacity-50 flex items-center gap-1"
+												>
+													<span>{'🔓'}</span>
+													<span>{'Unlock'}</span>
+												</button>
+											)}
+										</div>
+										<p className="text-xs font-normal text-gray-500 mt-1 normal-case">
+											{'The actual name stored in the database and used for webhooks. This is the trackName you are using. Changing this will rename all matching tracks.'}
+										</p>
+									</div>
+									<div className="text-xs font-semibold text-gray-400 uppercase">
+										{'Display Name (Frontend)'}
+										<p className="text-xs font-normal text-gray-500 mt-1 normal-case">
+											{'Optional friendly name shown throughout the app. Leave empty to use the internal name.'}
+										</p>
+									</div>
+								</div>
+								<div className="space-y-2">
+									{trackNames.filter(name => name !== 'All').map((trackName) => (
+										<div key={trackName} className="grid grid-cols-2 gap-3">
+											<div className="flex items-center gap-2">
+												<input
+													type="text"
+													value={editingTrackName[trackName] ?? trackName}
+													onChange={(e) => {
+														setEditingTrackName(prev => ({
+															...prev,
+															[trackName]: e.target.value
+														}))
+													}}
+													disabled={renamingTrackName || lockedTrackNames[trackName] !== false}
+													readOnly={lockedTrackNames[trackName] !== false}
+													className="flex-1 px-3 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 read-only:cursor-not-allowed"
+												/>
+												{lockedTrackNames[trackName] === false && (
+													<>
+														<button
+															onClick={() => {
+																setEditingTrackName(prev => {
+																	const newState = { ...prev }
+																	delete newState[trackName]
+																	return newState
+																})
+																setLockedTrackNames(prev => ({ ...prev, [trackName]: true }))
+															}}
+															disabled={renamingTrackName}
+															className="p-1.5 text-gray-400 hover:text-gray-200 disabled:opacity-50"
+															title="Undo changes"
+														>
+															{'\u21ba'}
+														</button>
+														<button
+															onClick={() => {
+																const newName = editingTrackName[trackName]
+																if (newName && newName !== trackName) {
+																	handleInlineRename(trackName, newName)
+																		.then(() => {
+																			setLockedTrackNames(prev => ({ ...prev, [trackName]: true }))
+																			return null
+																		}).catch(console.error)
+																} else {
+																	setLockedTrackNames(prev => ({ ...prev, [trackName]: true }))
+																}
+															}}
+															disabled={renamingTrackName}
+															className="p-1.5 text-green-400 hover:text-green-300 disabled:opacity-50"
+															title="Confirm rename"
+														>
+															{'\u2713'}
+														</button>
+													</>
+
+												)}
+											</div>
+											<div className="flex items-center gap-2">
+												<input
+													type="text"
+													value={translations[trackName] ?? ''}
+													onChange={(e) => {
+														const newTranslations = { ...translations, [trackName]: e.target.value }
+														setTranslations(newTranslations)
+														setEditingTranslation(trackName)
+													}}
+													onBlur={() => {
+														if (editingTranslation === trackName) {
+															saveTranslations(translations).catch(console.error)
+															setEditingTranslation(null)
+														}
+													}}
+													placeholder={trackName}
+													disabled={savingTranslations}
+													className="flex-1 px-3 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+												/>
+												{translations[trackName] && (
+													<button
+														onClick={() => {
+															const newTranslations = { ...translations }
+															delete newTranslations[trackName]
+															setTranslations(newTranslations)
+															saveTranslations(newTranslations).catch(console.error)
+														}}
+														disabled={savingTranslations}
+														className="px-3 py-1.5 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded disabled:opacity-50 transition-colors shrink-0"
+													>
+														{'Clear'}
+													</button>
+												)}
+											</div>
+										</div>
+									))}
+								</div>
+							</div>
+						)}
+					</div>
+				)}
+
+				{!showProblematic && trackNames.length > 1 && (
 					<div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-						<div className="flex items-center justify-between gap-2 mb-3">
+						<div className="mb-3">
 							<span className="text-sm font-medium text-gray-300">{'Filter by Track Type:'}</span>
-							<button
-								onClick={() => {
-									setRenameOldName(selectedTrackName === 'All' ? '' : selectedTrackName)
-									setRenameNewName('')
-									setShowRenameModal(true)
-								}}
-								className="px-3 py-1 text-xs bg-gray-700 text-gray-300 hover:bg-gray-600 rounded transition-colors"
-							>
-								{'Rename Track Type'}
-							</button>
 						</div>
 						<div className="flex flex-wrap gap-2">
 							{trackNames.map((name) => (
@@ -230,7 +443,7 @@ export default function TracksTab (): ReactElement {
 											: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
 									}`}
 								>
-									{name}
+									{name === 'All' ? name : getTranslatedName(name)}
 								</button>
 							))}
 						</div>
@@ -346,7 +559,7 @@ export default function TracksTab (): ReactElement {
 								return (
 									<tr key={track._id ?? index} className={`hover:bg-gray-750 ${isInvalid ? 'bg-red-900/10' : ''}`}>
 										<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">
-											{track.trackName}
+											{getTranslatedName(track.trackName)}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
 											{isInvalid ? (
@@ -424,63 +637,6 @@ export default function TracksTab (): ReactElement {
 						>
 							{'Last'}
 						</button>
-					</div>
-				</div>
-			)}
-
-			{showRenameModal && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700">
-						<h3 className="text-xl font-bold mb-4 text-white">{'Rename Track Type'}</h3>
-						<div className="space-y-4">
-							<div>
-								<label className="block text-sm font-medium text-gray-300 mb-2">
-									{'Old Track Name'}
-								</label>
-								<select
-									value={renameOldName}
-									onChange={(e) => setRenameOldName(e.target.value)}
-									className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-								>
-									<option value="">{'Select a track name'}</option>
-									{trackNames.filter(name => name !== 'All').map((name) => (
-										<option key={name} value={name}>{name}</option>
-									))}
-								</select>
-							</div>
-							<div>
-								<label className="block text-sm font-medium text-gray-300 mb-2">
-									{'New Track Name'}
-								</label>
-								<input
-									type="text"
-									value={renameNewName}
-									onChange={(e) => setRenameNewName(e.target.value)}
-									className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-									placeholder="Enter new track name"
-								/>
-							</div>
-						</div>
-						<div className="flex justify-end gap-3 mt-6">
-							<button
-								onClick={() => {
-									setShowRenameModal(false)
-									setRenameOldName('')
-									setRenameNewName('')
-								}}
-								disabled={renaming}
-								className="px-4 py-2 bg-gray-700 text-gray-300 hover:bg-gray-600 rounded disabled:opacity-50"
-							>
-								{'Cancel'}
-							</button>
-							<button
-								onClick={handleRename}
-								disabled={renaming || !renameOldName || !renameNewName}
-								className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-							>
-								{renaming ? 'Renaming...' : 'Rename'}
-							</button>
-						</div>
 					</div>
 				</div>
 			)}

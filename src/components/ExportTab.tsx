@@ -4,6 +4,7 @@ import axios from 'axios'
 import { useState, useEffect, useCallback, type ReactElement } from 'react'
 
 import type { Track } from '@/types/Track'
+import type { User } from '@/types/User'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -28,6 +29,11 @@ export default function ExportTab (): ReactElement {
 	const [outputType, setOutputType] = useState<OutputType>('list')
 	const [loading, setLoading] = useState(true)
 	const [exportedData, setExportedData] = useState<string>('')
+	const [translations, setTranslations] = useState<Record<string, string>>({})
+
+	const getTranslatedName = (trackName: string): string => {
+		return translations[trackName] ?? trackName
+	}
 
 	const fetchTracks = useCallback(async (): Promise<void> => {
 		setLoading(true)
@@ -48,6 +54,19 @@ export default function ExportTab (): ReactElement {
 
 	useEffect(() => {
 		fetchTracks().catch(console.error)
+
+		const fetchUser = async (): Promise<void> => {
+			try {
+				const response = await axios.get<User>(`${API_URL}/v1/users/user`, {
+					withCredentials: true
+				})
+				setTranslations(response.data.trackNameTranslations ?? {})
+			} catch (error) {
+				console.error('Failed to fetch user:', error)
+			}
+		}
+
+		fetchUser().catch(console.error)
 	}, [fetchTracks])
 
 	const generateExport = useCallback((): void => {
@@ -153,7 +172,7 @@ export default function ExportTab (): ReactElement {
 								const count = tracks.filter(t => t.trackName === type).length
 								return (
 									<option key={type} value={type}>
-										{`${type} (${count})`}
+										{`${getTranslatedName(type)} (${count})`}
 									</option>
 								)
 							})}
