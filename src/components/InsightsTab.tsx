@@ -43,6 +43,9 @@ export default function InsightsTab (): ReactElement {
 	const [tracks, setTracks] = useState<Track[]>([])
 	const [loading, setLoading] = useState(true)
 	const [translations, setTranslations] = useState<Record<string, string>>({})
+	const [excitingExpanded, setExcitingExpanded] = useState(false)
+	const [inhibitingExpanded, setInhibitingExpanded] = useState(false)
+	const [rhythmsExpanded, setRhythmsExpanded] = useState(false)
 
 	const { result: continuousResult, analyzing, progress, error, analyze, cancel } = useInsightsWorker()
 
@@ -197,13 +200,23 @@ export default function InsightsTab (): ReactElement {
 
 			{excitingEdges.length > 0 && (
 				<div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-					<div className="flex items-center gap-2 mb-3">
-						<span className="text-lg">{'⚡'}</span>
-						<span className="text-sm font-medium text-orange-400">{'Excitatory Influences'}</span>
-						<span className="text-xs text-gray-500">{`${excitingEdges.length} edges`}</span>
+					<div className="flex items-center justify-between mb-3">
+						<div className="flex items-center gap-2">
+							<span className="text-lg">{'⚡'}</span>
+							<span className="text-sm font-medium text-orange-400">{'Excitatory Influences'}</span>
+							<span className="text-xs text-gray-500">{`${excitingEdges.length} edges`}</span>
+						</div>
+						{excitingEdges.length > 9 && (
+							<button
+								onClick={() => setExcitingExpanded(!excitingExpanded)}
+								className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+							>
+								{excitingExpanded ? 'Show Less' : `Show All (${excitingEdges.length})`}
+							</button>
+						)}
 					</div>
 					<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-						{excitingEdges.slice(0, 9).map((edge, idx) => (
+						{(excitingExpanded ? excitingEdges : excitingEdges.slice(0, 9)).map((edge, idx) => (
 							<InfluenceEdgeCard key={`exc-${idx}`} edge={edge} getTranslatedName={getTranslatedName} />
 						))}
 					</div>
@@ -212,13 +225,23 @@ export default function InsightsTab (): ReactElement {
 
 			{inhibitingEdges.length > 0 && (
 				<div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-					<div className="flex items-center gap-2 mb-3">
-						<span className="text-lg">{'🛑'}</span>
-						<span className="text-sm font-medium text-purple-400">{'Inhibitory Influences'}</span>
-						<span className="text-xs text-gray-500">{`${inhibitingEdges.length} edges`}</span>
+					<div className="flex items-center justify-between mb-3">
+						<div className="flex items-center gap-2">
+							<span className="text-lg">{'🛑'}</span>
+							<span className="text-sm font-medium text-purple-400">{'Inhibitory Influences'}</span>
+							<span className="text-xs text-gray-500">{`${inhibitingEdges.length} edges`}</span>
+						</div>
+						{inhibitingEdges.length > 9 && (
+							<button
+								onClick={() => setInhibitingExpanded(!inhibitingExpanded)}
+								className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+							>
+								{inhibitingExpanded ? 'Show Less' : `Show All (${inhibitingEdges.length})`}
+							</button>
+						)}
 					</div>
 					<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-						{inhibitingEdges.slice(0, 9).map((edge, idx) => (
+						{(inhibitingExpanded ? inhibitingEdges : inhibitingEdges.slice(0, 9)).map((edge, idx) => (
 							<InfluenceEdgeCard key={`inh-${idx}`} edge={edge} getTranslatedName={getTranslatedName} />
 						))}
 					</div>
@@ -227,13 +250,23 @@ export default function InsightsTab (): ReactElement {
 
 			{rhythmicBaselines.length > 0 && (
 				<div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-					<div className="flex items-center gap-2 mb-3">
-						<span className="text-lg">{'🔄'}</span>
-						<span className="text-sm font-medium text-blue-400">{'Rhythms'}</span>
-						<span className="text-xs text-gray-500">{'time-of-day & weekly patterns'}</span>
+					<div className="flex items-center justify-between mb-3">
+						<div className="flex items-center gap-2">
+							<span className="text-lg">{'🔄'}</span>
+							<span className="text-sm font-medium text-blue-400">{'Rhythms'}</span>
+							<span className="text-xs text-gray-500">{'time-of-day & weekly patterns'}</span>
+						</div>
+						{rhythmicBaselines.length > 8 && (
+							<button
+								onClick={() => setRhythmsExpanded(!rhythmsExpanded)}
+								className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+							>
+								{rhythmsExpanded ? 'Show Less' : `Show All (${rhythmicBaselines.length})`}
+							</button>
+						)}
 					</div>
 					<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-						{rhythmicBaselines.map((baseline, idx) => (
+						{(rhythmsExpanded ? rhythmicBaselines : rhythmicBaselines.slice(0, 8)).map((baseline, idx) => (
 							<BaselineRhythmCard key={`rhythm-${idx}`} baseline={baseline} getTranslatedName={getTranslatedName} />
 						))}
 					</div>
