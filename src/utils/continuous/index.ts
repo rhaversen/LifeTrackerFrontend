@@ -34,6 +34,7 @@ export async function computeContinuousInsights (
 		lambda2?: number
 		minStrength?: number
 		maxInsights?: number
+		translations?: Record<string, string>
 	} = {},
 	onProgress?: ProgressCallback
 ): Promise<ContinuousInsightsResult> {
