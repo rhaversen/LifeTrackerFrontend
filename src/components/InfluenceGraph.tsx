@@ -7,6 +7,7 @@ import type { InfluenceEdgeSerializable } from '../utils/continuous/workerTypes'
 interface InfluenceGraphProps {
 	edges: InfluenceEdgeSerializable[]
 	typeNames: string[]
+	getTranslatedName: (trackName: string) => string
 }
 
 interface Node {
@@ -55,7 +56,7 @@ function initializeNodes (typeNames: string[], width: number, height: number): M
 	return nodes
 }
 
-export default function InfluenceGraph ({ edges, typeNames }: InfluenceGraphProps): ReactElement {
+export default function InfluenceGraph ({ edges, typeNames, getTranslatedName }: InfluenceGraphProps): ReactElement {
 	const containerRef = useRef<HTMLDivElement>(null)
 	const [dimensions, setDimensions] = useState({ width: 600, height: 400 })
 	const [hoveredNode, setHoveredNode] = useState<string | null>(null)
@@ -272,7 +273,10 @@ export default function InfluenceGraph ({ edges, typeNames }: InfluenceGraphProp
 								fillOpacity={opacity}
 								className="pointer-events-none select-none"
 							>
-								{name.length > 9 ? name.slice(0, 8) + '…' : name}
+								{(() => {
+									const translatedName = getTranslatedName(name)
+									return translatedName.length > 9 ? translatedName.slice(0, 8) + '…' : translatedName
+								})()}
 							</text>
 						</g>
 					)
@@ -289,11 +293,11 @@ export default function InfluenceGraph ({ edges, typeNames }: InfluenceGraphProp
 					}}
 				>
 					<div className="flex items-center gap-2">
-						<span className="text-white font-medium">{hoveredEdge.source}</span>
+						<span className="text-white font-medium">{getTranslatedName(hoveredEdge.source)}</span>
 						<span className={hoveredEdge.direction === 'excite' ? 'text-red-400' : 'text-blue-400'}>
 							{hoveredEdge.direction === 'excite' ? '→' : '⊣'}
 						</span>
-						<span className="text-white font-medium">{hoveredEdge.target}</span>
+						<span className="text-white font-medium">{getTranslatedName(hoveredEdge.target)}</span>
 					</div>
 					<div className="text-gray-400 text-xs mt-1">
 						<span>{`HR@1h: ${hoveredEdge.hazardRatioAt1h.toFixed(2)}×`}</span>
@@ -305,7 +309,7 @@ export default function InfluenceGraph ({ edges, typeNames }: InfluenceGraphProp
 
 			{hoveredNode !== null && hoveredEdge === null && (
 				<div className="mt-2 text-center text-sm text-gray-300">
-					{hoveredNode}
+					{getTranslatedName(hoveredNode)}
 				</div>
 			)}
 
