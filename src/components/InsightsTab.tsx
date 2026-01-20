@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, type ReactElement } from 'react'
 
 import { useInsightsWorker } from '../hooks/useInsightsWorker'
 import type { Track } from '../types/Track'
+import type { User } from '../types/User'
 
 import ActivityCalendar from './ActivityCalendar'
 import InfluenceGraph from './InfluenceGraph'
@@ -41,8 +42,16 @@ function ProgressBar ({ percent, stage, detail }: ProgressBarProps): ReactElemen
 export default function InsightsTab (): ReactElement {
 	const [tracks, setTracks] = useState<Track[]>([])
 	const [loading, setLoading] = useState(true)
+	const [translations, setTranslations] = useState<Record<string, string>>({})
+	const [excitingExpanded, setExcitingExpanded] = useState(false)
+	const [inhibitingExpanded, setInhibitingExpanded] = useState(false)
+	const [rhythmsExpanded, setRhythmsExpanded] = useState(false)
 
 	const { result: continuousResult, analyzing, progress, error, analyze, cancel } = useInsightsWorker()
+
+	const getTranslatedName = (trackName: string): string => {
+		return translations[trackName] ?? trackName
+	}
 
 	const fetchTracks = useCallback(async (): Promise<void> => {
 		setLoading(true)
@@ -60,6 +69,19 @@ export default function InsightsTab (): ReactElement {
 
 	useEffect(() => {
 		fetchTracks().catch(console.error)
+
+		const fetchUser = async (): Promise<void> => {
+			try {
+				const response = await axios.get<User>(`${API_URL}/v1/users/user`, {
+					withCredentials: true
+				})
+				setTranslations(response.data.trackNameTranslations ?? {})
+			} catch (error) {
+				console.error('Failed to fetch user:', error)
+			}
+		}
+
+		fetchUser().catch(console.error)
 	}, [fetchTracks])
 
 	useEffect(() => {
@@ -67,17 +89,23 @@ export default function InsightsTab (): ReactElement {
 			return
 		}
 
-		analyze(tracks)
+		analyze(tracks, { translations })
 
 		return () => {
 			cancel()
 		}
-	}, [tracks, analyze, cancel])
+	}, [tracks, analyze, cancel, translations])
 
 	if (loading) {
 		return (
-			<div className="flex items-center justify-center py-20">
-				<div className="text-gray-300 text-xl">{'Loading tracks...'}</div>
+			<div className="space-y-6">
+				<h2 className="text-2xl font-bold text-gray-200">{'Insights'}</h2>
+				<div className="flex items-center justify-center py-20">
+					<div className="flex items-center gap-2">
+						<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+						<span className="text-gray-300 text-lg">{'Loading tracks...'}</span>
+					</div>
+				</div>
 			</div>
 		)
 	}
@@ -151,9 +179,8 @@ export default function InsightsTab (): ReactElement {
 			<h2 className="text-2xl font-bold text-gray-200">{'Insights'}</h2>
 
 			<div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-				<ActivityCalendar tracks={tracks} coverage={continuousResult.coverage} />
+				<ActivityCalendar tracks={tracks} coverage={continuousResult.coverage} getTranslatedName={getTranslatedName} />
 			</div>
-
 			<CoverageCard coverage={continuousResult.coverage} />
 
 			{influenceEdges.length > 0 && (
@@ -166,20 +193,31 @@ export default function InsightsTab (): ReactElement {
 					<InfluenceGraph
 						edges={influenceEdges}
 						typeNames={continuousResult.baselines.map(b => b.typeName)}
+						getTranslatedName={getTranslatedName}
 					/>
 				</div>
 			)}
 
 			{excitingEdges.length > 0 && (
 				<div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-					<div className="flex items-center gap-2 mb-3">
-						<span className="text-lg">{'⚡'}</span>
-						<span className="text-sm font-medium text-orange-400">{'Excitatory Influences'}</span>
-						<span className="text-xs text-gray-500">{`${excitingEdges.length} edges`}</span>
+					<div className="flex items-center justify-between mb-3">
+						<div className="flex items-center gap-2">
+							<span className="text-lg">{'⚡'}</span>
+							<span className="text-sm font-medium text-orange-400">{'Excitatory Influences'}</span>
+							<span className="text-xs text-gray-500">{`${excitingEdges.length} edges`}</span>
+						</div>
+						{excitingEdges.length > 9 && (
+							<button
+								onClick={() => setExcitingExpanded(!excitingExpanded)}
+								className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+							>
+								{excitingExpanded ? 'Show Less' : `Show All (${excitingEdges.length})`}
+							</button>
+						)}
 					</div>
 					<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-						{excitingEdges.slice(0, 9).map((edge, idx) => (
-							<InfluenceEdgeCard key={`exc-${idx}`} edge={edge} />
+						{(excitingExpanded ? excitingEdges : excitingEdges.slice(0, 9)).map((edge, idx) => (
+							<InfluenceEdgeCard key={`exc-${idx}`} edge={edge} getTranslatedName={getTranslatedName} />
 						))}
 					</div>
 				</div>
@@ -187,14 +225,24 @@ export default function InsightsTab (): ReactElement {
 
 			{inhibitingEdges.length > 0 && (
 				<div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-					<div className="flex items-center gap-2 mb-3">
-						<span className="text-lg">{'🛑'}</span>
-						<span className="text-sm font-medium text-purple-400">{'Inhibitory Influences'}</span>
-						<span className="text-xs text-gray-500">{`${inhibitingEdges.length} edges`}</span>
+					<div className="flex items-center justify-between mb-3">
+						<div className="flex items-center gap-2">
+							<span className="text-lg">{'🛑'}</span>
+							<span className="text-sm font-medium text-purple-400">{'Inhibitory Influences'}</span>
+							<span className="text-xs text-gray-500">{`${inhibitingEdges.length} edges`}</span>
+						</div>
+						{inhibitingEdges.length > 9 && (
+							<button
+								onClick={() => setInhibitingExpanded(!inhibitingExpanded)}
+								className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+							>
+								{inhibitingExpanded ? 'Show Less' : `Show All (${inhibitingEdges.length})`}
+							</button>
+						)}
 					</div>
 					<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-						{inhibitingEdges.slice(0, 9).map((edge, idx) => (
-							<InfluenceEdgeCard key={`inh-${idx}`} edge={edge} />
+						{(inhibitingExpanded ? inhibitingEdges : inhibitingEdges.slice(0, 9)).map((edge, idx) => (
+							<InfluenceEdgeCard key={`inh-${idx}`} edge={edge} getTranslatedName={getTranslatedName} />
 						))}
 					</div>
 				</div>
@@ -202,14 +250,24 @@ export default function InsightsTab (): ReactElement {
 
 			{rhythmicBaselines.length > 0 && (
 				<div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-					<div className="flex items-center gap-2 mb-3">
-						<span className="text-lg">{'🔄'}</span>
-						<span className="text-sm font-medium text-blue-400">{'Rhythms'}</span>
-						<span className="text-xs text-gray-500">{'time-of-day & weekly patterns'}</span>
+					<div className="flex items-center justify-between mb-3">
+						<div className="flex items-center gap-2">
+							<span className="text-lg">{'🔄'}</span>
+							<span className="text-sm font-medium text-blue-400">{'Rhythms'}</span>
+							<span className="text-xs text-gray-500">{'time-of-day & weekly patterns'}</span>
+						</div>
+						{rhythmicBaselines.length > 8 && (
+							<button
+								onClick={() => setRhythmsExpanded(!rhythmsExpanded)}
+								className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+							>
+								{rhythmsExpanded ? 'Show Less' : `Show All (${rhythmicBaselines.length})`}
+							</button>
+						)}
 					</div>
 					<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-						{rhythmicBaselines.map((baseline, idx) => (
-							<BaselineRhythmCard key={`rhythm-${idx}`} baseline={baseline} />
+						{(rhythmsExpanded ? rhythmicBaselines : rhythmicBaselines.slice(0, 8)).map((baseline, idx) => (
+							<BaselineRhythmCard key={`rhythm-${idx}`} baseline={baseline} getTranslatedName={getTranslatedName} />
 						))}
 					</div>
 				</div>

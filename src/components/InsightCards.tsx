@@ -155,9 +155,10 @@ interface InfluenceEdgeCardProps {
 		direction: 'excite' | 'inhibit' | 'neutral'
 		strength: number
 	}
+	getTranslatedName: (trackName: string) => string
 }
 
-export function InfluenceEdgeCard ({ edge }: InfluenceEdgeCardProps): ReactElement {
+export function InfluenceEdgeCard ({ edge, getTranslatedName }: InfluenceEdgeCardProps): ReactElement {
 	const config = edge.direction === 'inhibit'
 		? { emoji: '🛑', color: 'text-purple-400', borderColor: 'border-l-purple-500', arrow: '⊣' }
 		: { emoji: '⚡', color: 'text-orange-400', borderColor: 'border-l-orange-500', arrow: '→' }
@@ -171,9 +172,9 @@ export function InfluenceEdgeCard ({ edge }: InfluenceEdgeCardProps): ReactEleme
 				<div className="flex items-center gap-2">
 					<span className="text-lg">{config.emoji}</span>
 					<span className="text-gray-200 font-medium">
-						{edge.sourceType}
+						{getTranslatedName(edge.sourceType)}
 						<span className={`mx-1 ${config.color}`}>{config.arrow}</span>
-						{edge.targetType}
+						{getTranslatedName(edge.targetType)}
 					</span>
 				</div>
 				<span className={`text-sm font-bold ${config.color}`}>{`${hrStr}× @1h`}</span>
@@ -194,9 +195,10 @@ interface BaselineRhythmCardProps {
 		dowPeakDay: number
 		dowAmplitude: number
 	}
+	getTranslatedName: (trackName: string) => string
 }
 
-export function BaselineRhythmCard ({ baseline }: BaselineRhythmCardProps): ReactElement {
+export function BaselineRhythmCard ({ baseline, getTranslatedName }: BaselineRhythmCardProps): ReactElement {
 	const formatTime = (hour: number): string => {
 		const h = Math.floor(hour)
 		const m = Math.round((hour - h) * 60)
@@ -213,7 +215,7 @@ export function BaselineRhythmCard ({ baseline }: BaselineRhythmCardProps): Reac
 		<div className="bg-gray-800 rounded-lg p-3 border border-gray-700 border-l-4 border-l-blue-500">
 			<div className="flex items-center gap-2 mb-2">
 				<span className="text-lg">{'🔄'}</span>
-				<span className="text-gray-200 font-medium">{baseline.typeName}</span>
+				<span className="text-gray-200 font-medium">{getTranslatedName(baseline.typeName)}</span>
 			</div>
 			<div className="flex flex-wrap gap-2 text-xs text-gray-400">
 				{hasDailyRhythm && (

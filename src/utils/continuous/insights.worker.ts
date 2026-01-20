@@ -97,7 +97,7 @@ async function runAnalysis (tracks: Track[], options: WorkerOptions): Promise<vo
 			learningRate,
 			lambda1,
 			lambda2
-		}, fitProgress)
+		}, fitProgress, options.translations)
 
 		postProgress('Extracting insights', 90, 'Analyzing influence patterns')
 

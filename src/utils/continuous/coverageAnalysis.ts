@@ -1,6 +1,36 @@
 import type { CoverageStats, TrackingPeriod } from '../../types/Insights'
 import type { Track } from '../../types/Track'
 
+function computeDeltaStatistics (sortedTracks: Track[]): { mean: number, stdDev: number, q95: number } {
+	if (sortedTracks.length < 2) {
+		return { mean: 0, stdDev: 0, q95: 0 }
+	}
+
+	const deltas: number[] = []
+	for (let i = 1; i < sortedTracks.length; i++) {
+		const prev = new Date(sortedTracks[i - 1].date).getTime()
+		const curr = new Date(sortedTracks[i].date).getTime()
+		const deltaDays = (curr - prev) / (1000 * 60 * 60 * 24)
+		if (deltaDays > 0) {
+			deltas.push(deltaDays)
+		}
+	}
+
+	if (deltas.length === 0) {
+		return { mean: 0, stdDev: 0, q95: 0 }
+	}
+
+	const mean = deltas.reduce((sum, d) => sum + d, 0) / deltas.length
+	const variance = deltas.reduce((sum, d) => sum + Math.pow(d - mean, 2), 0) / deltas.length
+	const stdDev = Math.sqrt(variance)
+
+	const sortedDeltas = [...deltas].sort((a, b) => a - b)
+	const q95Index = Math.floor(sortedDeltas.length * 0.95)
+	const q95 = sortedDeltas[q95Index]
+
+	return { mean, stdDev, q95 }
+}
+
 export function computeCoverageStats (tracks: Track[]): CoverageStats {
 	if (tracks.length === 0) {
 		return {
@@ -23,129 +53,116 @@ export function computeCoverageStats (tracks: Track[]): CoverageStats {
 		}
 	}
 
-	const dates = validTracks.map(t => new Date(t.date))
-	const minTs = Math.min(...dates.map(d => d.getTime()))
-	const maxTs = Math.max(...dates.map(d => d.getTime()))
+	const sortedTracks = [...validTracks].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+	const dates = sortedTracks.map(t => new Date(t.date))
+	const minTs = dates[0].getTime()
+	const maxTs = dates[dates.length - 1].getTime()
 
-	const getDayKeyUTC = (d: Date): string => d.toISOString().slice(0, 10)
+	const totalDays = Math.floor((maxTs - minTs) / 86400000) + 1
 
-	const startDayKey = getDayKeyUTC(new Date(minTs))
-	const endDayKey = getDayKeyUTC(new Date(maxTs))
+	// Compute statistical outlier threshold for this track type
+	const stats = computeDeltaStatistics(sortedTracks)
 
-	const startDay = new Date(startDayKey + 'T00:00:00Z')
-	const endDay = new Date(endDayKey + 'T00:00:00Z')
+	// Use 3 standard deviations or 95th percentile (whichever is more conservative)
+	// Also enforce a minimum of 7 days to avoid false positives on daily tracking
+	const outlierThreshold = Math.max(7, Math.min(stats.mean + 7 * stats.stdDev, stats.q95 * 5))
 
-	const totalDays = Math.floor((endDay.getTime() - startDay.getTime()) / 86400000) + 1
-
-	const dailyCounts: Map<string, number> = new Map()
-	for (const track of validTracks) {
-		const d = new Date(track.date)
-		const key = getDayKeyUTC(d)
-		dailyCounts.set(key, (dailyCounts.get(key) ?? 0) + 1)
-	}
-
-	const dailyCountsArray: { date: Date; dayKey: string; count: number }[] = []
-	let currentTs = startDay.getTime()
-	while (currentTs <= endDay.getTime()) {
-		const currentDate = new Date(currentTs)
-		const key = getDayKeyUTC(currentDate)
-		dailyCountsArray.push({
-			date: currentDate,
-			dayKey: key,
-			count: dailyCounts.get(key) ?? 0
-		})
-		currentTs += 24 * 60 * 60 * 1000
-	}
-
-	const windowSize = 30
-	const thresholdMultiplier = 0.1
-	const minGapDays = 14
-
-	const rollingBaselines: number[] = []
-	for (let i = 0; i < dailyCountsArray.length; i++) {
-		const windowStart = Math.max(0, i - windowSize)
-		const windowEnd = Math.min(dailyCountsArray.length - 1, i + windowSize)
-		const windowCounts = dailyCountsArray.slice(windowStart, windowEnd + 1).map(d => d.count)
-		windowCounts.sort((a, b) => a - b)
-		const median = windowCounts[Math.floor(windowCounts.length / 2)]
-		rollingBaselines.push(median)
-	}
-
-	const isActive: boolean[] = dailyCountsArray.map((day, i) => {
-		const baseline = rollingBaselines[i]
-		const threshold = Math.max(2, baseline * thresholdMultiplier)
-		return day.count >= threshold
-	})
-
-	// Build periods by scanning for changes in active state
+	// Identify gap periods based on extreme delta outliers
 	const periods: TrackingPeriod[] = []
-	let periodStart = 0
-	let periodIsActive = isActive[0]
 
-	for (let i = 1; i <= isActive.length; i++) {
-		const isLast = i === isActive.length
-		const changed = !isLast && isActive[i] !== periodIsActive
+	for (let i = 0; i < sortedTracks.length; i++) {
+		const trackDate = new Date(sortedTracks[i].date)
 
-		if (changed || isLast) {
-			const periodEnd = isLast ? i - 1 : i - 1
-			const dayCount = periodEnd - periodStart + 1
-			const isGap = !periodIsActive && dayCount >= minGapDays
+		if (i === 0) {
+			// First track starts an active period
+			continue
+		}
 
-			periods.push({
-				startDate: dailyCountsArray[periodStart].date,
-				endDate: dailyCountsArray[periodEnd].date,
-				dayCount,
-				eventCount: dailyCountsArray.slice(periodStart, periodEnd + 1).reduce((sum, d) => sum + d.count, 0),
-				isGap
-			})
+		const prevDate = new Date(sortedTracks[i - 1].date)
+		const deltaDays = (trackDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
 
-			if (changed) {
-				periodStart = i
-				periodIsActive = isActive[i]
+		// If this delta is an extreme outlier, mark the gap
+		if (deltaDays > outlierThreshold) {
+			// Add active period before the gap (if not already added)
+			if (periods.length === 0 || periods[periods.length - 1].isGap) {
+				const activePeriodStart = periods.length === 0 ? dates[0] : new Date(periods[periods.length - 1].endDate.getTime() + 86400000)
+				periods.push({
+					startDate: activePeriodStart,
+					endDate: prevDate,
+					dayCount: Math.floor((prevDate.getTime() - activePeriodStart.getTime()) / 86400000) + 1,
+					eventCount: sortedTracks.filter(t => {
+						const d = new Date(t.date)
+						return d >= activePeriodStart && d <= prevDate
+					}).length,
+					isGap: false
+				})
+			} else {
+				// Update the end date of the last active period
+				periods[periods.length - 1].endDate = prevDate
+				periods[periods.length - 1].dayCount = Math.floor((prevDate.getTime() - periods[periods.length - 1].startDate.getTime()) / 86400000) + 1
+				periods[periods.length - 1].eventCount = sortedTracks.filter(t => {
+					const d = new Date(t.date)
+					return d >= periods[periods.length - 1].startDate && d <= prevDate
+				}).length
 			}
+
+			// Add the gap period
+			const gapStart = new Date(prevDate.getTime() + 86400000)
+			const gapEnd = new Date(trackDate.getTime() - 86400000)
+			periods.push({
+				startDate: gapStart,
+				endDate: gapEnd,
+				dayCount: Math.floor((gapEnd.getTime() - gapStart.getTime()) / 86400000) + 1,
+				eventCount: 0,
+				isGap: true
+			})
 		}
 	}
 
-	// Merge short gaps into surrounding active periods
-	const mergedPeriods = mergePeriods(periods, minGapDays)
+	// Add final active period
+	if (periods.length === 0) {
+		// No gaps detected - entire range is active
+		periods.push({
+			startDate: dates[0],
+			endDate: dates[dates.length - 1],
+			dayCount: totalDays,
+			eventCount: sortedTracks.length,
+			isGap: false
+		})
+	} else if (periods[periods.length - 1].isGap) {
+		// Last period was a gap, add final active period
+		const lastGapEnd = periods[periods.length - 1].endDate
+		const finalStart = new Date(lastGapEnd.getTime() + 86400000)
+		periods.push({
+			startDate: finalStart,
+			endDate: dates[dates.length - 1],
+			dayCount: Math.floor((dates[dates.length - 1].getTime() - finalStart.getTime()) / 86400000) + 1,
+			eventCount: sortedTracks.filter(t => {
+				const d = new Date(t.date)
+				return d >= finalStart
+			}).length,
+			isGap: false
+		})
+	} else {
+		// Extend last active period to the end
+		periods[periods.length - 1].endDate = dates[dates.length - 1]
+		periods[periods.length - 1].dayCount = Math.floor((dates[dates.length - 1].getTime() - periods[periods.length - 1].startDate.getTime()) / 86400000) + 1
+		periods[periods.length - 1].eventCount = sortedTracks.filter(t => {
+			const d = new Date(t.date)
+			return d >= periods[periods.length - 1].startDate
+		}).length
+	}
 
-	const activeDays = mergedPeriods.filter(p => !p.isGap).reduce((sum, p) => sum + p.dayCount, 0)
-	const gapDays = mergedPeriods.filter(p => p.isGap).reduce((sum, p) => sum + p.dayCount, 0)
+	const activeDays = periods.filter(p => !p.isGap).reduce((sum, p) => sum + p.dayCount, 0)
+	const gapDays = periods.filter(p => p.isGap).reduce((sum, p) => sum + p.dayCount, 0)
 
 	return {
 		totalDays,
 		activeDays,
 		gapDays,
 		coveragePercent: totalDays > 0 ? (activeDays / totalDays) * 100 : 0,
-		periods: mergedPeriods
+		periods
 	}
-}
-
-function mergePeriods (periods: TrackingPeriod[], minGapDays: number): TrackingPeriod[] {
-	if (periods.length <= 1) { return periods }
-
-	const merged: TrackingPeriod[] = []
-	let current = { ...periods[0] }
-
-	for (let i = 1; i < periods.length; i++) {
-		const next = periods[i]
-
-		if (current.isGap === next.isGap) {
-			current.endDate = next.endDate
-			current.dayCount += next.dayCount
-			current.eventCount += next.eventCount
-		} else if (next.isGap && next.dayCount < minGapDays) {
-			current.endDate = next.endDate
-			current.dayCount += next.dayCount
-			current.eventCount += next.eventCount
-		} else {
-			merged.push(current)
-			current = { ...next }
-		}
-	}
-	merged.push(current)
-
-	return merged
 }
 
 export function getActivePeriodTracks (tracks: Track[], coverage: CoverageStats): Track[] {

@@ -64,6 +64,7 @@ export interface WorkerOptions {
 	lambda2?: number
 	minStrength?: number
 	maxInsights?: number
+	translations?: Record<string, string>
 }
 
 export type WorkerRequestMessage =
