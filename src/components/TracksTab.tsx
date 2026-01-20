@@ -24,8 +24,22 @@ export default function TracksTab (): ReactElement {
 	const [savingTranslations, setSavingTranslations] = useState(false)
 	const [editingTrackName, setEditingTrackName] = useState<Record<string, string>>({})
 	const [renamingTrackName, setRenamingTrackName] = useState(false)
-	const [lockedTrackNames, setLockedTrackNames] = useState<Record<string, boolean>>({})
+	const [editModeEnabled, setEditModeEnabled] = useState(false)
 	const [trackManagementExpanded, setTrackManagementExpanded] = useState(false)
+
+	const hasUnsavedChanges = useCallback((trackName: string): boolean => {
+		const editedValue = editingTrackName[trackName]
+		return editedValue !== undefined && editedValue !== trackName
+	}, [editingTrackName])
+
+	const enableEditMode = useCallback(() => {
+		setEditModeEnabled(true)
+	}, [])
+
+	const disableEditMode = useCallback(() => {
+		setEditModeEnabled(false)
+		setEditingTrackName({})
+	}, [])
 
 	const fetchTracks = useCallback(async (): Promise<void> => {
 		setLoading(true)
@@ -192,7 +206,7 @@ export default function TracksTab (): ReactElement {
 			await fetchTrackNames()
 			await fetchTracks()
 
-			// Clear editing state
+			// Clear the editing state for the old name
 			setEditingTrackName(prev => {
 				const newState = { ...prev }
 				delete newState[oldName]
@@ -297,16 +311,21 @@ export default function TracksTab (): ReactElement {
 											<div className="text-xs font-semibold text-gray-400 uppercase">
 												{'Internal Name (Backend)'}
 											</div>
-											{Object.values(lockedTrackNames).some(locked => locked !== false) && (
+											{editModeEnabled ? (
 												<button
-													onClick={async () => {
+													onClick={disableEditMode}
+													disabled={renamingTrackName}
+													className="px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-500 disabled:opacity-50 flex items-center gap-1"
+												>
+													<span>{'🔒'}</span>
+													<span>{'Lock'}</span>
+												</button>
+											) : (
+												<button
+													onClick={() => {
 														const confirmed = confirm('Are you sure you want to unlock all internal names for editing? This will allow you to rename all tracks.')
 														if (confirmed) {
-															const unlocked: Record<string, boolean> = {}
-															trackNames.filter(name => name !== 'All').forEach(name => {
-																unlocked[name] = false
-															})
-															setLockedTrackNames(unlocked)
+															enableEditMode()
 														}
 													}}
 													disabled={renamingTrackName}
@@ -341,11 +360,11 @@ export default function TracksTab (): ReactElement {
 															[trackName]: e.target.value
 														}))
 													}}
-													disabled={renamingTrackName || lockedTrackNames[trackName] !== false}
-													readOnly={lockedTrackNames[trackName] !== false}
+													disabled={renamingTrackName || !editModeEnabled}
+													readOnly={!editModeEnabled}
 													className="flex-1 px-3 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 read-only:cursor-not-allowed"
 												/>
-												{lockedTrackNames[trackName] === false && (
+												{editModeEnabled && hasUnsavedChanges(trackName) && (
 													<>
 														<button
 															onClick={() => {
@@ -354,7 +373,6 @@ export default function TracksTab (): ReactElement {
 																	delete newState[trackName]
 																	return newState
 																})
-																setLockedTrackNames(prev => ({ ...prev, [trackName]: true }))
 															}}
 															disabled={renamingTrackName}
 															className="p-1.5 text-gray-400 hover:text-gray-200 disabled:opacity-50"
@@ -366,13 +384,7 @@ export default function TracksTab (): ReactElement {
 															onClick={() => {
 																const newName = editingTrackName[trackName]
 																if (newName && newName !== trackName) {
-																	handleInlineRename(trackName, newName)
-																		.then(() => {
-																			setLockedTrackNames(prev => ({ ...prev, [trackName]: true }))
-																			return null
-																		}).catch(console.error)
-																} else {
-																	setLockedTrackNames(prev => ({ ...prev, [trackName]: true }))
+																	handleInlineRename(trackName, newName).catch(console.error)
 																}
 															}}
 															disabled={renamingTrackName}
@@ -382,7 +394,6 @@ export default function TracksTab (): ReactElement {
 															{'\u2713'}
 														</button>
 													</>
-
 												)}
 											</div>
 											<div className="flex items-center gap-2">
