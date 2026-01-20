@@ -8,6 +8,7 @@ import type { Track } from '../types/Track'
 interface ActivityCalendarProps {
 	tracks: Track[]
 	coverage?: CoverageStats
+	getTranslatedName?: (trackName: string) => string
 }
 
 function getTrackColor (trackName: string): string {
@@ -43,7 +44,7 @@ function toDateKey (d: Date): string {
 	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export default function ActivityCalendar ({ tracks, coverage }: ActivityCalendarProps): ReactElement {
+export default function ActivityCalendar ({ tracks, coverage, getTranslatedName = (name) => name }: ActivityCalendarProps): ReactElement {
 	const validTracks = tracks.filter(t => !isNaN(new Date(t.date).getTime()))
 
 	if (validTracks.length === 0) {
@@ -260,6 +261,7 @@ export default function ActivityCalendar ({ tracks, coverage }: ActivityCalendar
 											isToday={isToday}
 											date={day}
 											tracks={tracksOnDay ? [...tracksOnDay].sort() : []}
+											getTranslatedName={getTranslatedName}
 										/>
 									)
 								})}
@@ -291,7 +293,7 @@ export default function ActivityCalendar ({ tracks, coverage }: ActivityCalendar
 								className="w-3 h-3 rounded"
 								style={{ backgroundColor: trackColorMap.get(type) }}
 							/>
-							<span className="text-xs text-gray-400">{type}</span>
+							<span className="text-xs text-gray-400">{getTranslatedName(type)}</span>
 						</div>
 					))}
 				</div>
@@ -305,11 +307,13 @@ interface DayCellProps {
 	isToday: boolean
 	date: Date
 	tracks: string[]
+	getTranslatedName: (trackName: string) => string
 }
 
-function DayCell ({ background, isToday, date, tracks }: DayCellProps): ReactElement {
+function DayCell ({ background, isToday, date, tracks, getTranslatedName }: DayCellProps): ReactElement {
 	const isGradient = background.startsWith('linear-gradient')
-	const title = `${date.toLocaleDateString()}\n${tracks.length > 0 ? tracks.join(', ') : 'No activity'}`
+	const translatedTracks = tracks.map(getTranslatedName)
+	const title = `${date.toLocaleDateString()}\n${translatedTracks.length > 0 ? translatedTracks.join(', ') : 'No activity'}`
 
 	return (
 		<div

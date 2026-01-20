@@ -3,6 +3,7 @@
 import axios from 'axios'
 import { useEffect, useMemo, useState, type ReactElement } from 'react'
 
+import ActivityCalendar from '@/components/ActivityCalendar'
 import {
 	BoxPlot,
 	CalendarHeatmap,
@@ -31,6 +32,8 @@ import {
 	useWeekdayScatterData
 } from '@/hooks/useTrackData'
 import type { Track } from '@/types/Track'
+import type { User } from '@/types/User'
+import { computeCoverageStats } from '@/utils/continuous/coverageAnalysis'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -39,6 +42,19 @@ export default function VisualizeTab (): ReactElement {
 	const [selectedTrackName, setSelectedTrackName] = useState<string>('')
 	const [loading, setLoading] = useState(true)
 	const [trackNames, setTrackNames] = useState<string[]>([])
+	const [now, setNow] = useState(() => Date.now())
+	const [translations, setTranslations] = useState<Record<string, string>>({})
+
+	const getTranslatedName = (trackName: string): string => {
+		return translations[trackName] ?? trackName
+	}
+
+	useEffect(() => {
+		const interval = setInterval(() => {
+			setNow(Date.now())
+		}, 60000)
+		return () => clearInterval(interval)
+	}, [])
 
 	// Fetch only track names initially
 	useEffect(() => {
@@ -49,17 +65,29 @@ export default function VisualizeTab (): ReactElement {
 					withCredentials: true
 				})
 				const allNames = [...new Set(fullResponse.data.map(t => t.trackName))].sort()
-				setTrackNames(allNames)
+				setTrackNames(['All', ...allNames])
 
 				if (allNames.length > 0 && !selectedTrackName) {
-					setSelectedTrackName(allNames[0])
+					setSelectedTrackName('All')
 				}
 			} catch (error) {
 				console.error('Failed to fetch track names:', error)
 			}
 		}
 
+		const fetchUser = async (): Promise<void> => {
+			try {
+				const response = await axios.get<User>(`${API_URL}/v1/users/user`, {
+					withCredentials: true
+				})
+				setTranslations(response.data.trackNameTranslations ?? {})
+			} catch (error) {
+				console.error('Failed to fetch user:', error)
+			}
+		}
+
 		fetchTrackNames().catch(console.error)
+		fetchUser().catch(console.error)
 	}, [selectedTrackName])
 
 	// Fetch tracks for selected track name only
@@ -72,7 +100,7 @@ export default function VisualizeTab (): ReactElement {
 				const response = await axios.get<Track[]>(`${API_URL}/v1/tracks`, {
 					withCredentials: true,
 					params: {
-						trackName: selectedTrackName,
+						trackName: selectedTrackName === 'All' ? undefined : selectedTrackName,
 						sort: '-date'
 					}
 				})
@@ -88,14 +116,15 @@ export default function VisualizeTab (): ReactElement {
 	}, [selectedTrackName])
 
 	const filteredTracks = useMemo(() =>
-		tracks.filter(t => t.trackName === selectedTrackName),
+		selectedTrackName === 'All' ? tracks : tracks.filter(t => t.trackName === selectedTrackName),
 	[tracks, selectedTrackName])
 
-	const processedTracks = useProcessedTracks(filteredTracks)
-	const cumulativeData = useCumulativeData(processedTracks)
+	const coverage = useMemo(() => computeCoverageStats(filteredTracks), [filteredTracks])
+	const processedTracks = useProcessedTracks(filteredTracks, coverage)
+	const cumulativeData = useCumulativeData(processedTracks, coverage)
 	const deltaDaysData = useDeltaDaysData(processedTracks)
-	const frequencyData = useFrequencyData(processedTracks)
-	const timeOfDayData = useTimeOfDayData(processedTracks)
+	const frequencyData = useFrequencyData(processedTracks, coverage)
+	const timeOfDayData = useTimeOfDayData(processedTracks, coverage)
 	const hourlyDistribution = useHourlyDistribution(processedTracks)
 	const weekdayScatterData = useWeekdayScatterData(processedTracks)
 	const weekdayDistribution = useWeekdayDistribution(processedTracks)
@@ -106,13 +135,20 @@ export default function VisualizeTab (): ReactElement {
 	const weekdayBoxPlotData = useWeekdayBoxPlotData(processedTracks)
 	const monthlyBoxPlotData = useMonthlyBoxPlotData(processedTracks)
 
-	if (loading) {
-		return (
-			<div className="flex items-center justify-center py-20">
-				<div className="text-gray-300 text-xl">{'Loading...'}</div>
-			</div>
-		)
-	}
+	const lastTrackText = useMemo(() => {
+		const validTracks = tracks.filter(t => !isNaN(new Date(t.date).getTime()))
+		if (validTracks.length === 0) { return null }
+
+		const lastTrackDate = new Date(Math.max(...validTracks.map(t => new Date(t.date).getTime())))
+		const timeSinceLastMs = now - lastTrackDate.getTime()
+		const daysSince = Math.floor(timeSinceLastMs / (1000 * 60 * 60 * 24))
+		const hoursSince = Math.floor((timeSinceLastMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+		const minutesSince = Math.floor((timeSinceLastMs % (1000 * 60 * 60)) / (1000 * 60))
+
+		if (daysSince > 0) { return `${daysSince}d ${hoursSince}h ago` }
+		if (hoursSince > 0) { return `${hoursSince}h ${minutesSince}m ago` }
+		return `${minutesSince}m ago`
+	}, [tracks, now])
 
 	return (
 		<div className="space-y-6">
@@ -135,129 +171,154 @@ export default function VisualizeTab (): ReactElement {
 										: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
 								}`}
 							>
-								{name}
+								{name === 'All' ? name : getTranslatedName(name)}
 							</button>
 						))}
 					</div>
 				</div>
 			</div>
 
-			<section>
-				<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Activity Calendar'}</h2>
-				<CalendarHeatmap
-					title="Activity Calendar"
-					data={calendarHeatmapData.data}
-					yearRange={calendarHeatmapData.yearRange}
-				/>
-			</section>
-
-			<section>
-				<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Cumulative & Delta Days'}</h2>
-				<LineScatterChart
-					title="Cumulative Count & Delta Days (Log Scale)"
-					lineData={cumulativeData}
-					scatterData={deltaDaysData}
-					lineLabel="Cumulative Count"
-					scatterLabel="Delta Days"
-					yAxisLabel="Count / Days"
-					logScale={true}
-					className="h-80"
-				/>
-			</section>
-
-			<section>
-				<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Frequency Analysis'}</h2>
-				<LineScatterChart
-					title="Tracks Per Day - Rolling Averages"
-					lineData={frequencyData.monthlyAvg}
-					scatterData={frequencyData.weeklyAvg}
-					lineLabel="Monthly Avg"
-					scatterLabel="Weekly Avg"
-					yAxisLabel="Tracks per Day"
-					useSingleAxis={true}
-					className="h-80"
-				/>
-			</section>
-
-			<section>
-				<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Time of Day Analysis'}</h2>
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-					<TimeOfDayScatter
-						title="Time of Day by Date"
-						data={timeOfDayData}
-						className="h-80"
-					/>
-					<PolarChart
-						title="Hourly Distribution"
-						data={hourlyDistribution.data}
-						labels={hourlyDistribution.labels}
-						className="h-80"
-					/>
+			{loading ? (
+				<div className="flex items-center justify-center py-20">
+					<div className="flex items-center gap-2">
+						<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+						<span className="text-gray-300 text-lg">{'Loading...'}</span>
+					</div>
 				</div>
-			</section>
+			) : (
+				<>
+					<section>
+						<div className="flex items-center justify-between mb-4">
+							<h2 className="text-xl font-semibold text-gray-200">{'Activity Calendar'}</h2>
+							{lastTrackText != null && (
+								<span className="text-sm text-gray-500">{`Last track: ${lastTrackText}`}</span>
+							)}
+						</div>
+						{selectedTrackName === 'All' ? (
+							<div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+								<ActivityCalendar tracks={tracks} getTranslatedName={getTranslatedName} />
+							</div>
+						) : (
+							<CalendarHeatmap
+								title="Activity Calendar"
+								data={calendarHeatmapData.data}
+								yearRange={calendarHeatmapData.yearRange}
+								dateRange={calendarHeatmapData.dateRange}
+							/>
+						)}
+					</section>
 
-			<section>
-				<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Weekday Analysis'}</h2>
-				<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-					<WeekdayScatter
-						title="Delta Days by Weekday"
-						data={weekdayScatterData}
-						logScale={true}
-						className="h-80"
-					/>
-					<HeatmapChart
-						title="Weekday Heatmap"
-						data={weekdayHeatmapData.data}
-						xLabels={weekdayHeatmapData.xLabels}
-						yLabels={weekdayHeatmapData.yLabels}
-						className="h-80"
-					/>
-					<PolarChart
-						title="Weekday Distribution"
-						data={weekdayDistribution.data}
-						labels={weekdayDistribution.labels}
-						className="h-80"
-					/>
-				</div>
-			</section>
+					<section>
+						<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Cumulative & Delta Days'}</h2>
+						<LineScatterChart
+							title="Cumulative Count & Delta Days (Log Scale)"
+							lineData={cumulativeData}
+							scatterData={deltaDaysData}
+							lineLabel="Cumulative Count"
+							scatterLabel="Delta Days"
+							yAxisLabel="Count / Days"
+							logScale={true}
+							coverage={coverage}
+							className="h-80"
+						/>
+					</section>
 
-			<section>
-				<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Delta Days by Time of Day'}</h2>
-				<DeltaByTimeScatter
-					title="Delta Days vs Hour of Day"
-					data={deltaByTimeData}
-					logScale={true}
-					className="h-80"
-				/>
-			</section>
+					<section>
+						<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Frequency Analysis'}</h2>
+						<LineScatterChart
+							title="Tracks Per Day - Rolling Averages"
+							lineData={frequencyData.monthlyAvg}
+							scatterData={frequencyData.weeklyAvg}
+							lineLabel="Monthly Avg"
+							scatterLabel="Weekly Avg"
+							yAxisLabel="Tracks per Day"
+							useSingleAxis={true}
+							coverage={coverage}
+							className="h-80"
+						/>
+					</section>
 
-			<section>
-				<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Gap Distribution'}</h2>
-				<Histogram
-					title="Gap Histogram (Time Between Events)"
-					bins={gapHistogramData.bins}
-					labels={gapHistogramData.labels}
-					className="h-80"
-				/>
-			</section>
+					<section>
+						<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Time of Day Analysis'}</h2>
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+							<TimeOfDayScatter
+								title="Time of Day by Date"
+								data={timeOfDayData}
+								coverage={coverage}
+							/>
+							<PolarChart
+								title="Hourly Distribution"
+								data={hourlyDistribution.data}
+								labels={hourlyDistribution.labels}
+								className="h-80"
+							/>
+						</div>
+					</section>
 
-			<section>
-				<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Gap Distribution by Period'}</h2>
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-					<BoxPlot
-						title="Gap by Weekday"
-						stats={weekdayBoxPlotData.stats}
-						labels={weekdayBoxPlotData.labels}
-						className="h-80"
-					/>
-					<BoxPlot
-						title="Gap by Month"
-						stats={monthlyBoxPlotData.stats}
-						labels={monthlyBoxPlotData.labels}
-						className="h-80"
-					/>
-				</div>
-			</section>
+					<section>
+						<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Weekday Analysis'}</h2>
+						<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+							<WeekdayScatter
+								title="Delta Days by Weekday"
+								data={weekdayScatterData}
+								logScale={true}
+								className="h-80"
+							/>
+							<HeatmapChart
+								title="Weekday Heatmap"
+								data={weekdayHeatmapData.data}
+								xLabels={weekdayHeatmapData.xLabels}
+								yLabels={weekdayHeatmapData.yLabels}
+								className="h-80"
+							/>
+							<PolarChart
+								title="Weekday Distribution"
+								data={weekdayDistribution.data}
+								labels={weekdayDistribution.labels}
+								className="h-80"
+							/>
+						</div>
+					</section>
+
+					<section>
+						<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Delta Days by Time of Day'}</h2>
+						<DeltaByTimeScatter
+							title="Delta Days vs Hour of Day"
+							data={deltaByTimeData}
+							logScale={true}
+							className="h-80"
+						/>
+					</section>
+
+					<section>
+						<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Gap Distribution'}</h2>
+						<Histogram
+							title="Gap Histogram (Time Between Events)"
+							bins={gapHistogramData.bins}
+							labels={gapHistogramData.labels}
+							className="h-80"
+						/>
+					</section>
+
+					<section>
+						<h2 className="text-xl font-semibold text-gray-200 mb-4">{'Gap Distribution by Period'}</h2>
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+							<BoxPlot
+								title="Gap by Weekday"
+								stats={weekdayBoxPlotData.stats}
+								labels={weekdayBoxPlotData.labels}
+								className="h-80"
+							/>
+							<BoxPlot
+								title="Gap by Month"
+								stats={monthlyBoxPlotData.stats}
+								labels={monthlyBoxPlotData.labels}
+								className="h-80"
+							/>
+						</div>
+					</section>
+				</>
+			)}
 		</div>
 	)
 }
