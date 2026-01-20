@@ -18,6 +18,10 @@ export default function TracksTab (): ReactElement {
 	const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 	const [trackNames, setTrackNames] = useState<string[]>([])
 	const [selectedTrackName, setSelectedTrackName] = useState<string>('All')
+	const [showRenameModal, setShowRenameModal] = useState(false)
+	const [renameOldName, setRenameOldName] = useState('')
+	const [renameNewName, setRenameNewName] = useState('')
+	const [renaming, setRenaming] = useState(false)
 
 	const fetchTracks = useCallback(async (): Promise<void> => {
 		setLoading(true)
@@ -53,21 +57,21 @@ export default function TracksTab (): ReactElement {
 		}
 	}, [sortField, sortDirection, page, pageSize, selectedTrackName])
 
-	useEffect(() => {
-		const fetchTrackNames = async (): Promise<void> => {
-			try {
-				const response = await axios.get<Track[]>(`${API_URL}/v1/tracks`, {
-					withCredentials: true
-				})
-				const allNames = [...new Set(response.data.map(t => t.trackName))].sort()
-				setTrackNames(['All', ...allNames])
-			} catch (error) {
-				console.error('Failed to fetch track names:', error)
-			}
+	const fetchTrackNames = useCallback(async (): Promise<void> => {
+		try {
+			const response = await axios.get<Track[]>(`${API_URL}/v1/tracks`, {
+				withCredentials: true
+			})
+			const allNames = [...new Set(response.data.map(t => t.trackName))].sort()
+			setTrackNames(['All', ...allNames])
+		} catch (error) {
+			console.error('Failed to fetch track names:', error)
 		}
-
-		fetchTrackNames().catch(console.error)
 	}, [])
+
+	useEffect(() => {
+		fetchTrackNames().catch(console.error)
+	}, [fetchTrackNames])
 
 	useEffect(() => {
 		fetchTracks().catch(console.error)
@@ -95,6 +99,47 @@ export default function TracksTab (): ReactElement {
 			alert('Failed to delete track. Please try again.')
 		}
 	}, [])
+
+	const handleRename = useCallback(async (): Promise<void> => {
+		const oldName = renameOldName.trim()
+		const newName = renameNewName.trim()
+
+		if (!oldName || !newName) {
+			alert('Please fill in both fields.')
+			return
+		}
+
+		if (oldName === newName) {
+			alert('New name must be different from old name.')
+			return
+		}
+
+		setRenaming(true)
+		try {
+			const response = await axios.patch<{ modifiedCount: number }>(
+				`${API_URL}/v1/tracks/bulk/rename`,
+				{ oldName, newName },
+				{ withCredentials: true }
+			)
+
+			alert(`Successfully renamed ${response.data.modifiedCount} track${response.data.modifiedCount !== 1 ? 's' : ''}`)
+			setShowRenameModal(false)
+			setRenameOldName('')
+			setRenameNewName('')
+
+			// Refresh track names and tracks
+			await fetchTrackNames()
+			await fetchTracks()
+
+			// Select the new track name
+			setSelectedTrackName(newName)
+		} catch (error) {
+			console.error('Failed to rename tracks:', error)
+			alert('Failed to rename tracks. Please try again.')
+		} finally {
+			setRenaming(false)
+		}
+	}, [renameOldName, renameNewName, fetchTrackNames, fetchTracks])
 
 	const problematicTracks = useMemo(() => tracks.filter(track => isNaN(new Date(track.date).getTime())), [tracks])
 	const validTracks = useMemo(() => tracks.filter(track => !isNaN(new Date(track.date).getTime())), [tracks])
@@ -161,8 +206,18 @@ export default function TracksTab (): ReactElement {
 
 				{!showProblematic && trackNames.length > 1 && (
 					<div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-						<div className="flex items-center gap-2 mb-3">
+						<div className="flex items-center justify-between gap-2 mb-3">
 							<span className="text-sm font-medium text-gray-300">{'Filter by Track Type:'}</span>
+							<button
+								onClick={() => {
+									setRenameOldName(selectedTrackName === 'All' ? '' : selectedTrackName)
+									setRenameNewName('')
+									setShowRenameModal(true)
+								}}
+								className="px-3 py-1 text-xs bg-gray-700 text-gray-300 hover:bg-gray-600 rounded transition-colors"
+							>
+								{'Rename Track Type'}
+							</button>
 						</div>
 						<div className="flex flex-wrap gap-2">
 							{trackNames.map((name) => (
@@ -369,6 +424,63 @@ export default function TracksTab (): ReactElement {
 						>
 							{'Last'}
 						</button>
+					</div>
+				</div>
+			)}
+
+			{showRenameModal && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700">
+						<h3 className="text-xl font-bold mb-4 text-white">{'Rename Track Type'}</h3>
+						<div className="space-y-4">
+							<div>
+								<label className="block text-sm font-medium text-gray-300 mb-2">
+									{'Old Track Name'}
+								</label>
+								<select
+									value={renameOldName}
+									onChange={(e) => setRenameOldName(e.target.value)}
+									className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+								>
+									<option value="">{'Select a track name'}</option>
+									{trackNames.filter(name => name !== 'All').map((name) => (
+										<option key={name} value={name}>{name}</option>
+									))}
+								</select>
+							</div>
+							<div>
+								<label className="block text-sm font-medium text-gray-300 mb-2">
+									{'New Track Name'}
+								</label>
+								<input
+									type="text"
+									value={renameNewName}
+									onChange={(e) => setRenameNewName(e.target.value)}
+									className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+									placeholder="Enter new track name"
+								/>
+							</div>
+						</div>
+						<div className="flex justify-end gap-3 mt-6">
+							<button
+								onClick={() => {
+									setShowRenameModal(false)
+									setRenameOldName('')
+									setRenameNewName('')
+								}}
+								disabled={renaming}
+								className="px-4 py-2 bg-gray-700 text-gray-300 hover:bg-gray-600 rounded disabled:opacity-50"
+							>
+								{'Cancel'}
+							</button>
+							<button
+								onClick={handleRename}
+								disabled={renaming || !renameOldName || !renameNewName}
+								className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								{renaming ? 'Renaming...' : 'Rename'}
+							</button>
+						</div>
 					</div>
 				</div>
 			)}
