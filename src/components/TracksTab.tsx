@@ -24,8 +24,22 @@ export default function TracksTab (): ReactElement {
 	const [savingTranslations, setSavingTranslations] = useState(false)
 	const [editingTrackName, setEditingTrackName] = useState<Record<string, string>>({})
 	const [renamingTrackName, setRenamingTrackName] = useState(false)
-	const [lockedTrackNames, setLockedTrackNames] = useState<Record<string, boolean>>({})
+	const [editModeEnabled, setEditModeEnabled] = useState(false)
 	const [trackManagementExpanded, setTrackManagementExpanded] = useState(false)
+
+	const hasUnsavedChanges = useCallback((trackName: string): boolean => {
+		const editedValue = editingTrackName[trackName]
+		return editedValue !== undefined && editedValue !== trackName
+	}, [editingTrackName])
+
+	const enableEditMode = useCallback(() => {
+		setEditModeEnabled(true)
+	}, [])
+
+	const disableEditMode = useCallback(() => {
+		setEditModeEnabled(false)
+		setEditingTrackName({})
+	}, [])
 
 	const fetchTracks = useCallback(async (): Promise<void> => {
 		setLoading(true)
@@ -192,7 +206,7 @@ export default function TracksTab (): ReactElement {
 			await fetchTrackNames()
 			await fetchTracks()
 
-			// Clear editing state
+			// Clear the editing state for the old name
 			setEditingTrackName(prev => {
 				const newState = { ...prev }
 				delete newState[oldName]
@@ -291,22 +305,27 @@ export default function TracksTab (): ReactElement {
 								<p className="text-sm text-gray-400 mb-4">
 									{'Manage your track names and display labels. Changes to internal names will affect all associated tracks.'}
 								</p>
-								<div className="grid grid-cols-2 gap-3 mb-2">
-									<div>
-										<div className="flex items-center gap-2 mb-2">
-											<div className="text-xs font-semibold text-gray-400 uppercase">
+								<div className="grid grid-cols-2 gap-2 sm:gap-3 mb-2">
+									<div className="min-w-0">
+										<div className="flex items-center gap-1 sm:gap-2 mb-2 flex-wrap">
+											<div className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap">
 												{'Internal Name (Backend)'}
 											</div>
-											{Object.values(lockedTrackNames).some(locked => locked !== false) && (
+											{editModeEnabled ? (
 												<button
-													onClick={async () => {
+													onClick={disableEditMode}
+													disabled={renamingTrackName}
+													className="px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-500 disabled:opacity-50 flex items-center gap-1"
+												>
+													<span>{'🔒'}</span>
+													<span>{'Lock'}</span>
+												</button>
+											) : (
+												<button
+													onClick={() => {
 														const confirmed = confirm('Are you sure you want to unlock all internal names for editing? This will allow you to rename all tracks.')
 														if (confirmed) {
-															const unlocked: Record<string, boolean> = {}
-															trackNames.filter(name => name !== 'All').forEach(name => {
-																unlocked[name] = false
-															})
-															setLockedTrackNames(unlocked)
+															enableEditMode()
 														}
 													}}
 													disabled={renamingTrackName}
@@ -321,8 +340,8 @@ export default function TracksTab (): ReactElement {
 											{'The actual name stored in the database and used for webhooks. This is the trackName you are using. Changing this will rename all matching tracks.'}
 										</p>
 									</div>
-									<div className="text-xs font-semibold text-gray-400 uppercase">
-										{'Display Name (Frontend)'}
+									<div className="text-xs font-semibold text-gray-400 uppercase min-w-0">
+										<div className="whitespace-nowrap">{'Display Name (Frontend)'}</div>
 										<p className="text-xs font-normal text-gray-500 mt-1 normal-case">
 											{'Optional friendly name shown throughout the app. Leave empty to use the internal name.'}
 										</p>
@@ -330,8 +349,8 @@ export default function TracksTab (): ReactElement {
 								</div>
 								<div className="space-y-2">
 									{trackNames.filter(name => name !== 'All').map((trackName) => (
-										<div key={trackName} className="grid grid-cols-2 gap-3">
-											<div className="flex items-center gap-2">
+										<div key={trackName} className="grid grid-cols-2 gap-2 sm:gap-3">
+											<div className="flex items-center gap-1 sm:gap-2 min-w-0">
 												<input
 													type="text"
 													value={editingTrackName[trackName] ?? trackName}
@@ -341,11 +360,11 @@ export default function TracksTab (): ReactElement {
 															[trackName]: e.target.value
 														}))
 													}}
-													disabled={renamingTrackName || lockedTrackNames[trackName] !== false}
-													readOnly={lockedTrackNames[trackName] !== false}
-													className="flex-1 px-3 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 read-only:cursor-not-allowed"
+													disabled={renamingTrackName || !editModeEnabled}
+													readOnly={!editModeEnabled}
+													className="flex-1 min-w-0 px-2 sm:px-3 py-1.5 text-xs sm:text-sm bg-gray-700 border border-gray-600 rounded text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 read-only:cursor-not-allowed"
 												/>
-												{lockedTrackNames[trackName] === false && (
+												{editModeEnabled && hasUnsavedChanges(trackName) && (
 													<>
 														<button
 															onClick={() => {
@@ -354,10 +373,9 @@ export default function TracksTab (): ReactElement {
 																	delete newState[trackName]
 																	return newState
 																})
-																setLockedTrackNames(prev => ({ ...prev, [trackName]: true }))
 															}}
 															disabled={renamingTrackName}
-															className="p-1.5 text-gray-400 hover:text-gray-200 disabled:opacity-50"
+															className="p-1 sm:p-1.5 text-gray-400 hover:text-gray-200 disabled:opacity-50 shrink-0"
 															title="Undo changes"
 														>
 															{'\u21ba'}
@@ -366,26 +384,19 @@ export default function TracksTab (): ReactElement {
 															onClick={() => {
 																const newName = editingTrackName[trackName]
 																if (newName && newName !== trackName) {
-																	handleInlineRename(trackName, newName)
-																		.then(() => {
-																			setLockedTrackNames(prev => ({ ...prev, [trackName]: true }))
-																			return null
-																		}).catch(console.error)
-																} else {
-																	setLockedTrackNames(prev => ({ ...prev, [trackName]: true }))
+																	handleInlineRename(trackName, newName).catch(console.error)
 																}
 															}}
 															disabled={renamingTrackName}
-															className="p-1.5 text-green-400 hover:text-green-300 disabled:opacity-50"
+															className="p-1 sm:p-1.5 text-green-400 hover:text-green-300 disabled:opacity-50 shrink-0"
 															title="Confirm rename"
 														>
 															{'\u2713'}
 														</button>
 													</>
-
 												)}
 											</div>
-											<div className="flex items-center gap-2">
+											<div className="flex items-center gap-1 sm:gap-2 min-w-0">
 												<input
 													type="text"
 													value={translations[trackName] ?? ''}
@@ -402,7 +413,7 @@ export default function TracksTab (): ReactElement {
 													}}
 													placeholder={trackName}
 													disabled={savingTranslations}
-													className="flex-1 px-3 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+													className="flex-1 min-w-0 px-2 sm:px-3 py-1.5 text-xs sm:text-sm bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
 												/>
 												{translations[trackName] && (
 													<button
@@ -413,7 +424,7 @@ export default function TracksTab (): ReactElement {
 															saveTranslations(newTranslations).catch(console.error)
 														}}
 														disabled={savingTranslations}
-														className="px-3 py-1.5 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded disabled:opacity-50 transition-colors shrink-0"
+														className="px-2 sm:px-3 py-1.5 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded disabled:opacity-50 transition-colors shrink-0 whitespace-nowrap"
 													>
 														{'Clear'}
 													</button>
@@ -508,10 +519,11 @@ export default function TracksTab (): ReactElement {
 						<tr>
 							<th
 								onClick={() => toggleSort('trackName')}
-								className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-600 transition-colors"
+								className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-600 transition-colors"
 							>
 								<div className="flex items-center gap-1">
-									{'Track Name'}
+									<span className="hidden sm:inline">{'Track Name'}</span>
+									<span className="sm:hidden">{'Track'}</span>
 									{sortField === 'trackName' && (
 										<span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
 									)}
@@ -519,7 +531,7 @@ export default function TracksTab (): ReactElement {
 							</th>
 							<th
 								onClick={() => toggleSort('date')}
-								className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-600 transition-colors"
+								className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-600 transition-colors"
 							>
 								<div className="flex items-center gap-1">
 									{'Date'}
@@ -528,11 +540,12 @@ export default function TracksTab (): ReactElement {
 									)}
 								</div>
 							</th>
-							<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+							<th className="hidden md:table-cell px-2 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
 								{'Time'}
 							</th>
-							<th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
-								{'Actions'}
+							<th className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+								<span className="hidden sm:inline">{'Actions'}</span>
+								<span className="sm:hidden">{'Del'}</span>
 							</th>
 						</tr>
 					</thead>
@@ -558,21 +571,27 @@ export default function TracksTab (): ReactElement {
 								const isInvalid = isNaN(date.getTime())
 								return (
 									<tr key={track._id ?? index} className={`hover:bg-gray-750 ${isInvalid ? 'bg-red-900/10' : ''}`}>
-										<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">
-											{getTranslatedName(track.trackName)}
+										<td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 text-xs sm:text-sm font-medium text-gray-200">
+											<div className="truncate max-w-[100px] sm:max-w-none">
+												{getTranslatedName(track.trackName)}
+											</div>
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+										<td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 text-xs sm:text-sm text-gray-300">
 											{isInvalid ? (
-												<span className="text-red-400 font-mono">{String(track.date)}</span>
+												<span className="text-red-400 font-mono text-xs">{String(track.date)}</span>
 											) : (
-												date.toLocaleDateString('en-GB', {
-													day: '2-digit',
-													month: 'short',
-													year: 'numeric'
-												})
+												<>
+													<div className="md:hidden">
+														<div>{date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</div>
+														<div className="text-[10px] text-gray-400">{date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+													</div>
+													<div className="hidden md:block whitespace-nowrap">
+														{date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+													</div>
+												</>
 											)}
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+										<td className="hidden md:table-cell px-2 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-400">
 											{isInvalid ? (
 												<span className="text-red-400">{'Invalid Date'}</span>
 											) : (
@@ -583,12 +602,13 @@ export default function TracksTab (): ReactElement {
 												})
 											)}
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+										<td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 whitespace-nowrap text-right text-xs sm:text-sm">
 											<button
 												onClick={() => handleDelete(track._id!)}
 												className="text-red-400 hover:text-red-300 font-medium transition-colors"
 											>
-												{'Delete'}
+												<span className="hidden sm:inline">{'Delete'}</span>
+												<span className="sm:hidden">{'Del'}</span>
 											</button>
 										</td>
 									</tr>

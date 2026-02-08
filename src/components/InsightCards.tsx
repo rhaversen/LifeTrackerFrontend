@@ -154,6 +154,8 @@ interface InfluenceEdgeCardProps {
 		hazardRatioAt1h: number
 		direction: 'excite' | 'inhibit' | 'neutral'
 		strength: number
+		selectionFreq?: number
+		qualityFlags?: string[]
 	}
 	getTranslatedName: (trackName: string) => string
 }
@@ -165,6 +167,7 @@ export function InfluenceEdgeCard ({ edge, getTranslatedName }: InfluenceEdgeCar
 
 	const hrStr = edge.hazardRatioAt1h.toFixed(2)
 	const strengthPercent = Math.round(edge.strength * 100)
+	const hasWarnings = edge.qualityFlags && edge.qualityFlags.length > 0
 
 	return (
 		<div className={`bg-gray-800 rounded-lg p-3 border border-gray-700 border-l-4 ${config.borderColor}`}>
@@ -182,6 +185,14 @@ export function InfluenceEdgeCard ({ edge, getTranslatedName }: InfluenceEdgeCar
 			<div className="flex flex-wrap gap-2 text-xs text-gray-500">
 				<span className="bg-gray-700/50 px-2 py-0.5 rounded">{`50% by ${edge.massTimeLabel}`}</span>
 				<span className="bg-gray-700/50 px-2 py-0.5 rounded">{`strength: ${strengthPercent}%`}</span>
+				{edge.selectionFreq !== undefined && (
+					<span className="bg-gray-700/50 px-2 py-0.5 rounded">{`stability: ${Math.round(edge.selectionFreq * 100)}%`}</span>
+				)}
+				{hasWarnings && (
+					<span className="bg-yellow-900/50 text-yellow-400 px-2 py-0.5 rounded" title={edge.qualityFlags?.join(', ')}>
+						{'⚠'}
+					</span>
+				)}
 			</div>
 		</div>
 	)

@@ -274,7 +274,7 @@ export default function InsightsTab (): ReactElement {
 			)}
 
 			<div className="text-xs text-gray-600 text-center pt-4 border-t border-gray-800">
-				{`Point process model: ${tracks.length} events • ${continuousResult.numTypes} types • ${continuousResult.totalObservedHours.toFixed(0)} observed hours • Exponential basis kernels`}
+				{`Switching Poisson model: ${tracks.length} events • ${continuousResult.numTypes} types • ${continuousResult.numBins} bins • ${continuousResult.numRegimes} regimes • ${continuousResult.totalObservedHours.toFixed(0)} observed hours${continuousResult.converged ? ' • converged' : ''}`}
 			</div>
 		</div>
 	)

@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useMemo, type ReactElement } from 'react'
 
-import type { InfluenceEdgeSerializable } from '../utils/continuous/workerTypes'
+import type { InfluenceEdgeSerializable } from '../utils/continuous_v2/workerTypes'
 
 interface InfluenceGraphProps {
 	edges: InfluenceEdgeSerializable[]
