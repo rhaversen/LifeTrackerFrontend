@@ -5,11 +5,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import type { CoverageStats } from '../types/Insights'
 import type { Track } from '../types/Track'
 import type {
-	WorkerRequestMessage,
-	WorkerResponseMessage,
-	WorkerOptions,
+	WorkerRequestMessageV2,
+	WorkerResponseMessageV2,
+	WorkerOptionsV2,
 	ContinuousInsightsResultSerializable
-} from '../utils/continuous/workerTypes'
+} from '../utils/continuous_v2/workerTypes'
 
 export interface InsightsProgress {
 	stage: string
@@ -21,12 +21,18 @@ export interface ContinuousInsightsResult {
 	insights: ContinuousInsightsResultSerializable['insights']
 	edges: ContinuousInsightsResultSerializable['edges']
 	baselines: ContinuousInsightsResultSerializable['baselines']
-	diagnostics: Map<string, { ksStatistic: number; ksPassesAt05: boolean }>
+	motifs: ContinuousInsightsResultSerializable['motifs']
+	diagnostics: Map<string, { calibrationError: number }>
+	validation: ContinuousInsightsResultSerializable['validation']
 	coverage: CoverageStats
 	totalObservedHours: number
 	numEvents: number
 	numTypes: number
+	numBins: number
+	numRegimes: number
 	modelFitted: boolean
+	converged: boolean
+	trainLogLik: number[]
 }
 
 export interface UseInsightsWorkerReturn {
@@ -34,16 +40,15 @@ export interface UseInsightsWorkerReturn {
 	analyzing: boolean
 	progress: InsightsProgress | null
 	error: string | null
-	analyze: (tracks: Track[], options?: WorkerOptions) => void
+	analyze: (tracks: Track[], options?: WorkerOptionsV2) => void
 	cancel: () => void
 }
 
 function convertResult (data: ContinuousInsightsResultSerializable): ContinuousInsightsResult {
-	const diagnostics = new Map<string, { ksStatistic: number; ksPassesAt05: boolean }>()
+	const diagnostics = new Map<string, { calibrationError: number }>()
 	for (const d of data.diagnostics) {
 		diagnostics.set(d.typeName, {
-			ksStatistic: d.ksStatistic,
-			ksPassesAt05: d.ksPassesAt05
+			calibrationError: d.calibrationError
 		})
 	}
 
@@ -51,12 +56,18 @@ function convertResult (data: ContinuousInsightsResultSerializable): ContinuousI
 		insights: data.insights,
 		edges: data.edges,
 		baselines: data.baselines,
+		motifs: data.motifs,
 		diagnostics,
+		validation: data.validation,
 		coverage: data.coverage,
 		totalObservedHours: data.totalObservedHours,
 		numEvents: data.numEvents,
 		numTypes: data.numTypes,
-		modelFitted: data.modelFitted
+		numBins: data.numBins,
+		numRegimes: data.numRegimes,
+		modelFitted: data.modelFitted,
+		converged: data.converged,
+		trainLogLik: data.trainLogLik
 	}
 }
 
@@ -74,7 +85,7 @@ export function useInsightsWorker (): UseInsightsWorkerReturn {
 		}
 	}, [])
 
-	const analyze = useCallback((tracks: Track[], options: WorkerOptions = {}) => {
+	const analyze = useCallback((tracks: Track[], options: WorkerOptionsV2 = {}) => {
 		workerRef.current?.terminate()
 
 		setAnalyzing(true)
@@ -83,11 +94,11 @@ export function useInsightsWorker (): UseInsightsWorkerReturn {
 		setResult(null)
 
 		const worker = new Worker(
-			new URL('../utils/continuous/insights.worker.ts', import.meta.url)
+			new URL('../utils/continuous_v2/insights.worker.ts', import.meta.url)
 		)
 		workerRef.current = worker
 
-		worker.onmessage = (event: MessageEvent<WorkerResponseMessage>) => {
+		worker.onmessage = (event: MessageEvent<WorkerResponseMessageV2>) => {
 			const msg = event.data
 
 			switch (msg.type) {
@@ -125,7 +136,7 @@ export function useInsightsWorker (): UseInsightsWorkerReturn {
 			workerRef.current = null
 		}
 
-		const message: WorkerRequestMessage = {
+		const message: WorkerRequestMessageV2 = {
 			type: 'start',
 			tracks,
 			options
